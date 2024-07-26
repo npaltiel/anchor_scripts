@@ -17,3 +17,10 @@ combined_df['Year'] = pd.DatetimeIndex(combined_df['Visit Date']).year
 combined_df['Month'] = pd.DatetimeIndex(combined_df['Visit Date']).month
 
 combined_df = combined_df.drop_duplicates(subset = ['Admission ID', 'Month', 'Year'])
+combined_df = pd.merge(combined_df, df_contracts, left_on='Contract', right_on='ContractName', how='left')
+combined_df = pd.merge(combined_df, df_patients, on='Admission ID', how='left')
+
+combined_df['Unique ID'] = [combined_df['Medicaid No.'][i] if pd.notna(combined_df['Medicaid No.'][i]) else combined_df['Patient Name'][i] + str(combined_df['Date of Birth'][i]) for i in range(len(combined_df))]
+
+
+
