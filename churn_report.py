@@ -1,5 +1,6 @@
 import pandas as pd
 from datetime import datetime
+import sqlite3
 
 df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\Downloads\\List of Patients.csv")
 df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\Downloads\\Contract Lookup.csv")
@@ -134,8 +135,15 @@ for (contract_type, year, month), _ in results_df.iterrows():
 # Sort the MultiIndex by 'Contract Type' first, then by 'Year' and 'Month'
 results_df = results_df.sort_index(level=['Contract Type', 'Year', 'Month'])
 
-current_month = datetime.today().month
-current_year = datetime.today().year
-file_name = f'Churn_Report_Stats_{current_month}_{current_year}.csv'
-file_path = 'C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\'
-results_df.to_csv(file_path + file_name)
+# current_month = datetime.today().month
+# current_year = datetime.today().year
+# file_name = f'Churn_Report_Stats_{current_month}_{current_year}.csv'
+# file_path = 'C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\'
+# results_df.to_csv(file_path + file_name)
+
+conn = sqlite3.connect("C:\\Users\\nochum.paltiel\\Documents\\PycharmProjects\\anchor_scripts\\churn.db")
+
+# Create all tables
+results_df.to_sql("churn_results", conn, if_exists='replace', index=False)
+
+conn.close()
