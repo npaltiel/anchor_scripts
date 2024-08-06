@@ -134,6 +134,28 @@ for (contract_type, year, month), _ in results_df.iterrows():
 
 # Sort the MultiIndex by 'Contract Type' first, then by 'Year' and 'Month'
 results_df = results_df.sort_index(level=['Contract Type', 'Year', 'Month'])
+results_df.reset_index(inplace=True)
+
+results_df['Previous Month'] = results_df['Month'] - 1
+results_df['Previous Year'] = results_df['Year']
+results_df.loc[combined_df['Month'] == 1, 'Previous Month'] = 12
+results_df.loc[combined_df['Month'] == 1, 'Previous Year'] -= 1
+
+# Create a shifted DataFrame for comparison
+shifted_df2 = results_df[['Contract Type', 'Year', 'Month', 'Total']].copy()
+shifted_df2.columns = ['Contract Type', 'Previous Year', 'Previous Month', 'Previous Total']
+
+
+# Merge the original DataFrame with the shifted DataFrame
+merged_df2 = results_df.merge(
+    shifted_df2,
+    on=['Previous Year', 'Previous Month', 'Contract Type'],
+    how='left',
+)
+
+results_df['Previous Total'] = merged_df2['Previous Total'].fillna(0).astype(int)
+results_df['Growth'] = results_df['Total'] - results_df['Previous Total']
+results_df.drop(columns=['Previous Month', 'Previous Year', 'Previous Total'], inplace=True)
 
 # current_month = datetime.today().month
 # current_year = datetime.today().year
