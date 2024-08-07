@@ -138,8 +138,8 @@ results_df.reset_index(inplace=True)
 
 results_df['Previous Month'] = results_df['Month'] - 1
 results_df['Previous Year'] = results_df['Year']
-results_df.loc[combined_df['Month'] == 1, 'Previous Month'] = 12
-results_df.loc[combined_df['Month'] == 1, 'Previous Year'] -= 1
+results_df.loc[results_df['Month'] == 1, 'Previous Month'] = 12
+results_df.loc[results_df['Month'] == 1, 'Previous Year'] -= 1
 
 # Create a shifted DataFrame for comparison
 shifted_df2 = results_df[['Contract Type', 'Year', 'Month', 'Total']].copy()
@@ -154,7 +154,7 @@ merged_df2 = results_df.merge(
 )
 
 results_df['Previous Total'] = merged_df2['Previous Total'].fillna(0).astype(int)
-results_df['Growth'] = results_df['Total'] - results_df['Previous Total']
+results_df['Growth'] = [results_df['Total'][i] - results_df['Previous Total'][i] if results_df['Previous Total'][i] > 0 else None for i in range(len(results_df))]
 results_df.drop(columns=['Previous Month', 'Previous Year', 'Previous Total'], inplace=True)
 
 # current_month = datetime.today().month
