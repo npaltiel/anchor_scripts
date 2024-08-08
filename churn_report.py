@@ -52,7 +52,7 @@ merged_df1 = combined_df.merge(
 combined_df['Previous (Category)'] = merged_df1['Exists'].notna()
 
 # Create a column for the Previous (Ever) check
-combined_df['Previous (Ever)'] = False
+combined_df['Previous (Total)'] = False
 # Create a MultiIndex DataFrame to easily check for previous records
 index_df = combined_df.set_index(['Unique ID', 'Year', 'Month'])
 
@@ -69,7 +69,7 @@ for idx, row in combined_df.iterrows():
         prev_year = year
 
     # Check if there's a record with the same Unique ID in the previous month/year
-    combined_df.at[idx, 'Previous (Ever)'] = (uid, prev_year, prev_month) in index_df.index
+    combined_df.at[idx, 'Previous (Total)'] = (uid, prev_year, prev_month) in index_df.index
 
 # Drop the temporary columns
 combined_df.drop(columns=['Previous Month', 'Previous Year'], inplace=True)
@@ -79,7 +79,7 @@ combined_df = combined_df.sort_values(by=['Unique ID', 'Contract Type', 'Year', 
 
 # Group by 'Unique ID' and 'Contract Type' and calculate cumulative count of earlier records
 combined_df['Earlier (Category)'] = combined_df.groupby(['Unique ID', 'Contract Type']).cumcount() > 0
-combined_df['Earlier (Ever)'] = combined_df.groupby(['Unique ID']).cumcount() > 0
+combined_df['Earlier (Total)'] = combined_df.groupby(['Unique ID']).cumcount() > 0
 
 # Generate unique combinations of Contract Type, Year, and Month
 unique_combinations = combined_df[['Contract Type', 'Year', 'Month']].drop_duplicates()
@@ -111,9 +111,9 @@ for (contract_type, year, month), _ in results_df.iterrows():
             monthly_data = combined_df[(combined_df['Year'] == year) & (combined_df['Month'] == month) & (
                     combined_df['Branch'] == contract_type)]
 
-        continued_count = monthly_data[monthly_data['Previous (Ever)'] == True].shape[0]
-        new_count = monthly_data[(monthly_data['Previous (Ever)'] == False) & (monthly_data['Earlier (Ever)'] == False)].shape[0]
-        retained_count = monthly_data[(monthly_data['Previous (Ever)'] == False) & (monthly_data['Earlier (Ever)'] == True)].shape[0]
+        continued_count = monthly_data[monthly_data['Previous (Total)'] == True].shape[0]
+        new_count = monthly_data[(monthly_data['Previous (Total)'] == False) & (monthly_data['Earlier (Total)'] == False)].shape[0]
+        retained_count = monthly_data[(monthly_data['Previous (Total)'] == False) & (monthly_data['Earlier (Total)'] == True)].shape[0]
         total_count = monthly_data.shape[0]
 
     else:
@@ -154,6 +154,7 @@ merged_df2 = results_df.merge(
 )
 
 results_df['Previous Total'] = merged_df2['Previous Total'].fillna(0).astype(int)
+results_df['Continued Percentage'] = merged_df2['Continued']/merged_df2['Previous Total']
 results_df['Growth'] = [results_df['Total'][i] - results_df['Previous Total'][i] if results_df['Previous Total'][i] > 0 else None for i in range(len(results_df))]
 results_df.drop(columns=['Previous Month', 'Previous Year', 'Previous Total'], inplace=True)
 
