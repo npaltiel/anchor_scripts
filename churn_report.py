@@ -1,49 +1,47 @@
 import pandas as pd
-from datetime import datetime
 import sqlite3
 
-df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\Downloads\\List of Patients.csv")
-df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\Downloads\\Contract Lookup.csv")
-df_2023 = pd.read_csv("C:\\Users\\nochum.paltiel\\Downloads\\Visit_Report_2023.csv")
-df_jan_april = pd.read_csv("C:\\Users\\nochum.paltiel\\Downloads\\Visit_Report_Jan_April.csv")
-df_may_june = pd.read_csv("C:\\Users\\nochum.paltiel\\Downloads\\Visit_Report_May_June.csv")
+df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\List of Patients.csv")
+df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\Contract Lookup.csv")
+df_2023 = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\Visit_Report_2023.csv")
+df_2024 = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\Visit_Report_2024.csv")
 
-combined_df = pd.concat([df_may_june, df_jan_april, df_2023])
-combined_df = combined_df[combined_df['Missed Visit'] == 'No']
+combined_df = pd.concat([df_2024, df_2023])
+combined_df = combined_df[combined_df['MissedVisit'] == 'No']
 
-split_df = combined_df['Patient (Admission ID)'].str.split('(', expand=True)
+split_df = combined_df['PatientName'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')
-combined_df[['Patient Name', 'Admission ID']] = split_df[[0, 1]]
+combined_df[['PatientName', 'AdmissionID']] = split_df[[0, 1]]
 
-combined_df['Year'] = pd.DatetimeIndex(combined_df['Visit Date']).year
-combined_df['Month'] = pd.DatetimeIndex(combined_df['Visit Date']).month
+combined_df['Year'] = pd.DatetimeIndex(combined_df['VisitDate']).year
+combined_df['Month'] = pd.DatetimeIndex(combined_df['VisitDate']).month
 
-combined_df = combined_df.drop_duplicates(subset=['Admission ID', 'Month', 'Year'])
-combined_df = pd.merge(combined_df, df_contracts, left_on='Contract', right_on='ContractName', how='left')
-combined_df = pd.merge(combined_df, df_patients, on='Admission ID', how='left')
+combined_df = combined_df.drop_duplicates(subset=['AdmissionID', 'Month', 'Year'])
+combined_df = pd.merge(combined_df, df_contracts, on='ContractName', how='left')
+combined_df = pd.merge(combined_df, df_patients, left_on='AdmissionID', right_on='Admission ID', how='left')
 
-combined_df['Unique ID'] = [
-    combined_df['Medicaid No.'][i] if pd.notna(combined_df['Medicaid No.'][i]) else combined_df['Patient Name'][
+combined_df['UniqueID'] = [
+    combined_df['MedicaidNo'][i] if pd.notna(combined_df['MedicaidNo'][i]) else combined_df['PatientName'][
                                                                                         i] + str(
         combined_df['Date of Birth'][i]) for i in range(len(combined_df))]
-combined_df = combined_df.drop_duplicates(subset=['Unique ID', 'Contract Type', 'Month', 'Year']).reset_index(drop=True)
+combined_df = combined_df.drop_duplicates(subset=['UniqueID', 'ContractType', 'Month', 'Year']).reset_index(drop=True)
 
 # Finding Previous Month
 # Create a column for the previous month and year
-combined_df['Previous Month'] = combined_df['Month'] - 1
-combined_df['Previous Year'] = combined_df['Year']
-combined_df.loc[combined_df['Month'] == 1, 'Previous Month'] = 12
-combined_df.loc[combined_df['Month'] == 1, 'Previous Year'] -= 1
+combined_df['PreviousMonth'] = combined_df['Month'] - 1
+combined_df['PreviousYear'] = combined_df['Year']
+combined_df.loc[combined_df['Month'] == 1, 'PreviousMonth'] = 12
+combined_df.loc[combined_df['Month'] == 1, 'PreviousYear'] -= 1
 
 # Create a shifted DataFrame for comparison
-shifted_df = combined_df[['Unique ID', 'Contract Type', 'Year', 'Month']].copy()
+shifted_df = combined_df[['UniqueID', 'ContractType', 'Year', 'Month']].copy()
 shifted_df['Exists'] = True
 
 # Merge the original DataFrame with the shifted DataFrame
 merged_df1 = combined_df.merge(
     shifted_df,
-    left_on=['Unique ID', 'Contract Type', 'Previous Year', 'Previous Month'],
-    right_on=['Unique ID', 'Contract Type', 'Year', 'Month'],
+    left_on=['UniqueID', 'ContractType', 'PreviousYear', 'PreviousMonth'],
+    right_on=['UniqueID', 'ContractType', 'Year', 'Month'],
     how='left',
     suffixes=('', '_y')
 )
@@ -54,11 +52,11 @@ combined_df['Previous (Category)'] = merged_df1['Exists'].notna()
 # Create a column for the Previous (Ever) check
 combined_df['Previous (Total)'] = False
 # Create a MultiIndex DataFrame to easily check for previous records
-index_df = combined_df.set_index(['Unique ID', 'Year', 'Month'])
+index_df = combined_df.set_index(['UniqueID', 'Year', 'Month'])
 
 # Iterate over each row to check for previous month occurrence
 for idx, row in combined_df.iterrows():
-    uid, year, month = row['Unique ID'], row['Year'], row['Month']
+    uid, year, month = row['UniqueID'], row['Year'], row['Month']
 
     # Determine the previous month and year
     if month == 1:
@@ -72,31 +70,31 @@ for idx, row in combined_df.iterrows():
     combined_df.at[idx, 'Previous (Total)'] = (uid, prev_year, prev_month) in index_df.index
 
 # Drop the temporary columns
-combined_df.drop(columns=['Previous Month', 'Previous Year'], inplace=True)
+combined_df.drop(columns=['PreviousMonth', 'PreviousYear'], inplace=True)
 
 # Sort the DataFrame by 'Unique ID', 'Contract Type', 'Year', and 'Month'
-combined_df = combined_df.sort_values(by=['Unique ID', 'Contract Type', 'Year', 'Month'])
+combined_df = combined_df.sort_values(by=['UniqueID', 'ContractType', 'Year', 'Month'])
 
 # Group by 'Unique ID' and 'Contract Type' and calculate cumulative count of earlier records
-combined_df['Earlier (Category)'] = combined_df.groupby(['Unique ID', 'Contract Type']).cumcount() > 0
-combined_df['Earlier (Total)'] = combined_df.groupby(['Unique ID']).cumcount() > 0
+combined_df['Earlier (Category)'] = combined_df.groupby(['UniqueID', 'ContractType']).cumcount() > 0
+combined_df['Earlier (Total)'] = combined_df.groupby(['UniqueID']).cumcount() > 0
 
 # Generate unique combinations of Contract Type, Year, and Month
-unique_combinations = combined_df[['Contract Type', 'Year', 'Month']].drop_duplicates()
+unique_combinations = combined_df[['ContractType', 'Year', 'Month']].drop_duplicates()
 # Remove rows where Contract Type is NaN
-unique_combinations = unique_combinations.dropna(subset=['Contract Type'])
+unique_combinations = unique_combinations.dropna(subset=['ContractType'])
 # Add a 'Total' contract type to represent total rows for each month
 totals_combinations = unique_combinations[['Year', 'Month']].drop_duplicates()
 code_95 = totals_combinations.copy()
-totals_combinations['Contract Type'] = ['Total' for _ in range(len(totals_combinations))]
-code_95['Contract Type'] = ['Code 95' for _ in range(len(code_95))]
+totals_combinations['ContractType'] = ['Total' for _ in range(len(totals_combinations))]
+code_95['ContractType'] = ['Code 95' for _ in range(len(code_95))]
 # Combine the original and total combinations
 combined_combinations = pd.concat([unique_combinations, code_95, totals_combinations], ignore_index=True)
 
 
 # Create an empty DataFrame to store the results with a MultiIndex
 index = pd.MultiIndex.from_tuples([tuple(x) for x in combined_combinations.values],
-                                  names=['Contract Type', 'Year', 'Month'])
+                                  names=['ContractType', 'Year', 'Month'])
 results_df = pd.DataFrame(index=index, columns=['New', 'Continued', 'Retained', 'Total'])
 
 # Initialize the DataFrame with zeros
@@ -118,7 +116,7 @@ for (contract_type, year, month), _ in results_df.iterrows():
 
     else:
         monthly_data = combined_df[(combined_df['Year'] == year) & (combined_df['Month'] == month) & (
-                    combined_df['Contract Type'] == contract_type)]
+                    combined_df['ContractType'] == contract_type)]
 
         # Count the number of rows that meet each condition
         continued_count = monthly_data[monthly_data['Previous (Category)'] == True].shape[0]
@@ -133,30 +131,30 @@ for (contract_type, year, month), _ in results_df.iterrows():
     results_df.loc[(contract_type, year, month), 'Total'] = total_count
 
 # Sort the MultiIndex by 'Contract Type' first, then by 'Year' and 'Month'
-results_df = results_df.sort_index(level=['Contract Type', 'Year', 'Month'])
+results_df = results_df.sort_index(level=['ContractType', 'Year', 'Month'])
 results_df.reset_index(inplace=True)
 
-results_df['Previous Month'] = results_df['Month'] - 1
-results_df['Previous Year'] = results_df['Year']
-results_df.loc[results_df['Month'] == 1, 'Previous Month'] = 12
-results_df.loc[results_df['Month'] == 1, 'Previous Year'] -= 1
+results_df['PreviousMonth'] = results_df['Month'] - 1
+results_df['PreviousYear'] = results_df['Year']
+results_df.loc[results_df['Month'] == 1, 'PreviousMonth'] = 12
+results_df.loc[results_df['Month'] == 1, 'PreviousYear'] -= 1
 
 # Create a shifted DataFrame for comparison
-shifted_df2 = results_df[['Contract Type', 'Year', 'Month', 'Total']].copy()
-shifted_df2.columns = ['Contract Type', 'Previous Year', 'Previous Month', 'Previous Total']
+shifted_df2 = results_df[['ContractType', 'Year', 'Month', 'Total']].copy()
+shifted_df2.columns = ['ContractType', 'PreviousYear', 'PreviousMonth', 'PreviousTotal']
 
 
 # Merge the original DataFrame with the shifted DataFrame
 merged_df2 = results_df.merge(
     shifted_df2,
-    on=['Previous Year', 'Previous Month', 'Contract Type'],
+    on=['PreviousYear', 'PreviousMonth', 'ContractType'],
     how='left',
 )
 
-results_df['Previous Total'] = merged_df2['Previous Total'].fillna(0).astype(int)
-results_df['Continued Percentage'] = merged_df2['Continued']/merged_df2['Previous Total']
-results_df['Growth'] = [results_df['Total'][i] - results_df['Previous Total'][i] if results_df['Previous Total'][i] > 0 else None for i in range(len(results_df))]
-results_df.drop(columns=['Previous Month', 'Previous Year', 'Previous Total'], inplace=True)
+results_df['PreviousTotal'] = merged_df2['PreviousTotal'].fillna(0).astype(int)
+results_df['Continued Percentage'] = merged_df2['Continued']/merged_df2['PreviousTotal']
+results_df['Growth'] = [results_df['Total'][i] - results_df['PreviousTotal'][i] if results_df['PreviousTotal'][i] > 0 else None for i in range(len(results_df))]
+results_df.drop(columns=['PreviousMonth', 'PreviousYear', 'PreviousTotal'], inplace=True)
 
 # current_month = datetime.today().month
 # current_year = datetime.today().year
