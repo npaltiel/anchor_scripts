@@ -53,7 +53,7 @@ caregiver_df = caregiver_df.sort_values(by=['CaregiverCode', 'Year', 'Month'])
 caregiver_df['Earlier'] = caregiver_df.groupby(['CaregiverCode']).cumcount() > 0
 caregiver_df = caregiver_df.reset_index(drop=True)
 caregiver_df['Retained'] = [1 if caregiver_df['Continued'][i] != 1 and caregiver_df['Earlier'][i] == True else 0 for i in range(len(caregiver_df))]
-caregiver_df['New'] = [1 if caregiver_df['Continued'][i] != 1 and caregiver_df['Earlier'][i] != True else 0 for i in range(len(caregiver_df))]
+caregiver_df['New'] = [1 if caregiver_df['Earlier'][i] != True else 0 for i in range(len(caregiver_df))]
 
 caregiver_df.drop(columns=['CaregiverName_Code', 'Earlier', 'PreviousMonth', 'PreviousYear'], inplace=True)
 
@@ -70,6 +70,7 @@ visits_df = visits_df.drop_duplicates(subset=['AdmissionID', 'Month', 'Year'])
 
 # Lookup contracts and patient information from relevant sources
 visits_df = pd.merge(visits_df, df_contracts, on='ContractName', how='left')
+visits_df['ContractType'] = visits_df['ContractType'].fillna('Unknown')
 visits_df = pd.merge(visits_df, df_patients, left_on='AdmissionID', right_on='Admission ID', how='left')
 
 # Create unique ID
@@ -128,96 +129,110 @@ for idx, row in visits_df.iterrows():
 # Drop the temporary columns
 visits_df.drop(columns=['PreviousMonth', 'PreviousYear'], inplace=True)
 
-# Sort the DataFrame by 'Unique ID', 'Contract Type', 'Year', and 'Month'
-visits_df = visits_df.sort_values(by=['UniqueID', 'ContractType', 'Year', 'Month'])
+# Sort the DataFrame by 'Unique ID', 'Year', and 'Month'
+visits_df = visits_df.sort_values(by=['UniqueID', 'Year', 'Month', 'ContractType'])
 
 # Group by 'Unique ID' and 'Contract Type' and calculate cumulative count of earlier records
 visits_df['Earlier (Category)'] = visits_df.groupby(['UniqueID', 'ContractType']).cumcount() > 0
 visits_df['Earlier (Total)'] = visits_df.groupby(['UniqueID']).cumcount() > 0
+visits_df.reset_index(inplace=True, drop=True)
 
-# Generate unique combinations of Contract Type, Year, and Month
-unique_combinations = visits_df[['ContractType', 'Year', 'Month']].drop_duplicates()
-# Remove rows where Contract Type is NaN
-unique_combinations = unique_combinations.dropna(subset=['ContractType'])
-# Add a 'Total' contract type to represent total rows for each month
-totals_combinations = unique_combinations[['Year', 'Month']].drop_duplicates()
-code_95 = totals_combinations.copy()
-totals_combinations['ContractType'] = ['Total' for _ in range(len(totals_combinations))]
-code_95['ContractType'] = ['Code 95' for _ in range(len(code_95))]
-# Combine the original and total combinations
-combined_combinations = pd.concat([unique_combinations, code_95, totals_combinations], ignore_index=True)
+# Work with only columns I require
+patients_df = visits_df[['Month', 'Year', 'ContractType', 'UniqueID', 'PatientName', 'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
 
+# Get Metrics I need
+patients_df['Continued (Category)'] = [1 if patients_df['Previous (Category)'][i] == True else 0 for i in range(len(patients_df))]
+patients_df['Continued (Total)'] = [1 if patients_df['Previous (Total)'][i] == True else 0 for i in range(len(patients_df))]
+patients_df['Retained (Category)'] = [1 if patients_df['Previous (Category)'][i] != True and patients_df['Earlier (Category)'][i] == True else 0 for i in range(len(patients_df))]
+patients_df['Retained (Total)'] = [1 if patients_df['Previous (Total)'][i] != True and patients_df['Earlier (Total)'][i] == True else 0 for i in range(len(patients_df))]
+patients_df['New (Category)'] = [1 if patients_df['Earlier (Category)'][i] != True else 0 for i in range(len(patients_df))]
+patients_df['New (Total)'] = [1 if patients_df['Earlier (Total)'][i] != True else 0 for i in range(len(patients_df))]
 
-# Create an empty DataFrame to store the results with a MultiIndex
-index = pd.MultiIndex.from_tuples([tuple(x) for x in combined_combinations.values],
-                                  names=['ContractType', 'Year', 'Month'])
-results_df = pd.DataFrame(index=index, columns=['New', 'Continued', 'Retained', 'Total'])
+patients_df.drop(columns=['Previous (Category)', 'Previous (Total)', 'Previous (Category)', 'Previous (Total)', 'Earlier (Category)','Earlier (Total)'], inplace=True)
 
-# Initialize the DataFrame with zeros
-results_df = results_df.fillna(0)
-
-# Populate the DataFrame with counts based on the conditions
-for (contract_type, year, month), _ in results_df.iterrows():
-    if contract_type == 'Total' or contract_type == 'Code 95':
-        if contract_type == 'Total':
-            monthly_data = visits_df[(visits_df['Year'] == year) & (visits_df['Month'] == month)]
-        else:
-            monthly_data = visits_df[(visits_df['Year'] == year) & (visits_df['Month'] == month) & (
-                    visits_df['Branch'] == contract_type)]
-
-        continued_count = monthly_data[monthly_data['Previous (Total)'] == True].shape[0]
-        new_count = monthly_data[(monthly_data['Previous (Total)'] == False) & (monthly_data['Earlier (Total)'] == False)].shape[0]
-        retained_count = monthly_data[(monthly_data['Previous (Total)'] == False) & (monthly_data['Earlier (Total)'] == True)].shape[0]
-        total_count = monthly_data.shape[0]
-
-    else:
-        monthly_data = visits_df[(visits_df['Year'] == year) & (visits_df['Month'] == month) & (
-                    visits_df['ContractType'] == contract_type)]
-
-        # Count the number of rows that meet each condition
-        continued_count = monthly_data[monthly_data['Previous (Category)'] == True].shape[0]
-        new_count = monthly_data[(monthly_data['Previous (Category)'] == False) & (monthly_data['Earlier (Category)'] == False)].shape[0]
-        retained_count = monthly_data[(monthly_data['Previous (Category)'] == False) & (monthly_data['Earlier (Category)'] == True)].shape[0]
-        total_count = monthly_data.shape[0]
-
-    # Assign the counts to the appropriate cells in the results DataFrame
-    results_df.loc[(contract_type, year, month), 'Continued'] = continued_count
-    results_df.loc[(contract_type, year, month), 'New'] = new_count
-    results_df.loc[(contract_type, year, month), 'Retained'] = retained_count
-    results_df.loc[(contract_type, year, month), 'Total'] = total_count
-
-# Sort the MultiIndex by 'Contract Type' first, then by 'Year' and 'Month'
-results_df = results_df.sort_index(level=['ContractType', 'Year', 'Month'])
-results_df.reset_index(inplace=True)
-
-results_df['PreviousMonth'] = results_df['Month'] - 1
-results_df['PreviousYear'] = results_df['Year']
-results_df.loc[results_df['Month'] == 1, 'PreviousMonth'] = 12
-results_df.loc[results_df['Month'] == 1, 'PreviousYear'] -= 1
-
-# Create a shifted DataFrame for comparison
-shifted_df = results_df[['ContractType', 'Year', 'Month', 'Total']].copy()
-shifted_df.columns = ['ContractType', 'PreviousYear', 'PreviousMonth', 'PreviousTotal']
-
-
-# Merge the original DataFrame with the shifted DataFrame
-merged_df = results_df.merge(
-    shifted_df,
-    on=['PreviousYear', 'PreviousMonth', 'ContractType'],
-    how='left',
-)
-
-results_df['PreviousTotal'] = merged_df['PreviousTotal'].fillna(0).astype(int)
-results_df['Continued Percentage'] = merged_df['Continued']/merged_df['PreviousTotal']
-results_df['Growth'] = [results_df['Total'][i] - results_df['PreviousTotal'][i] if results_df['PreviousTotal'][i] > 0 else None for i in range(len(results_df))]
-results_df.drop(columns=['PreviousMonth', 'PreviousYear', 'PreviousTotal'], inplace=True)
+# # Generate unique combinations of Contract Type, Year, and Month
+# unique_combinations = visits_df[['ContractType', 'Year', 'Month']].drop_duplicates()
+# # Remove rows where Contract Type is NaN
+# unique_combinations = unique_combinations.dropna(subset=['ContractType'])
+# # Add a 'Total' contract type to represent total rows for each month
+# totals_combinations = unique_combinations[['Year', 'Month']].drop_duplicates()
+# code_95 = totals_combinations.copy()
+# totals_combinations['ContractType'] = ['Total' for _ in range(len(totals_combinations))]
+# code_95['ContractType'] = ['Code 95' for _ in range(len(code_95))]
+# # Combine the original and total combinations
+# combined_combinations = pd.concat([unique_combinations, code_95, totals_combinations], ignore_index=True)
+#
+#
+# # Create an empty DataFrame to store the results with a MultiIndex
+# index = pd.MultiIndex.from_tuples([tuple(x) for x in combined_combinations.values],
+#                                   names=['ContractType', 'Year', 'Month'])
+# results_df = pd.DataFrame(index=index, columns=['New', 'Continued', 'Retained', 'Total'])
+#
+# # Initialize the DataFrame with zeros
+# results_df = results_df.fillna(0)
+#
+# # Populate the DataFrame with counts based on the conditions
+# for (contract_type, year, month), _ in results_df.iterrows():
+#     if contract_type == 'Total' or contract_type == 'Code 95':
+#         if contract_type == 'Total':
+#             monthly_data = visits_df[(visits_df['Year'] == year) & (visits_df['Month'] == month)]
+#         else:
+#             monthly_data = visits_df[(visits_df['Year'] == year) & (visits_df['Month'] == month) & (
+#                     visits_df['Branch'] == contract_type)]
+#
+#         continued_count = monthly_data[monthly_data['Previous (Total)'] == True].shape[0]
+#         new_count = monthly_data[(monthly_data['Previous (Total)'] == False) & (monthly_data['Earlier (Total)'] == False)].shape[0]
+#         retained_count = monthly_data[(monthly_data['Previous (Total)'] == False) & (monthly_data['Earlier (Total)'] == True)].shape[0]
+#         total_count = monthly_data.shape[0]
+#
+#     else:
+#         monthly_data = visits_df[(visits_df['Year'] == year) & (visits_df['Month'] == month) & (
+#                     visits_df['ContractType'] == contract_type)]
+#
+#         # Count the number of rows that meet each condition
+#         continued_count = monthly_data[monthly_data['Previous (Category)'] == True].shape[0]
+#         new_count = monthly_data[(monthly_data['Previous (Category)'] == False) & (monthly_data['Earlier (Category)'] == False)].shape[0]
+#         retained_count = monthly_data[(monthly_data['Previous (Category)'] == False) & (monthly_data['Earlier (Category)'] == True)].shape[0]
+#         total_count = monthly_data.shape[0]
+#
+#     # Assign the counts to the appropriate cells in the results DataFrame
+#     results_df.loc[(contract_type, year, month), 'Continued'] = continued_count
+#     results_df.loc[(contract_type, year, month), 'New'] = new_count
+#     results_df.loc[(contract_type, year, month), 'Retained'] = retained_count
+#     results_df.loc[(contract_type, year, month), 'Total'] = total_count
+#
+# # Sort the MultiIndex by 'Contract Type' first, then by 'Year' and 'Month'
+# results_df = results_df.sort_index(level=['ContractType', 'Year', 'Month'])
+# results_df.reset_index(inplace=True)
+#
+# results_df['PreviousMonth'] = results_df['Month'] - 1
+# results_df['PreviousYear'] = results_df['Year']
+# results_df.loc[results_df['Month'] == 1, 'PreviousMonth'] = 12
+# results_df.loc[results_df['Month'] == 1, 'PreviousYear'] -= 1
+#
+# # Create a shifted DataFrame for comparison
+# shifted_df = results_df[['ContractType', 'Year', 'Month', 'Total']].copy()
+# shifted_df.columns = ['ContractType', 'PreviousYear', 'PreviousMonth', 'PreviousTotal']
+#
+#
+# # Merge the original DataFrame with the shifted DataFrame
+# merged_df = results_df.merge(
+#     shifted_df,
+#     on=['PreviousYear', 'PreviousMonth', 'ContractType'],
+#     how='left',
+# )
+#
+# results_df['PreviousTotal'] = merged_df['PreviousTotal'].fillna(0).astype(int)
+# results_df['Continued Percentage'] = merged_df['Continued']/merged_df['PreviousTotal']
+# results_df['Growth'] = [results_df['Total'][i] - results_df['PreviousTotal'][i] if results_df['PreviousTotal'][i] > 0 else None for i in range(len(results_df))]
+# results_df.drop(columns=['PreviousMonth', 'PreviousYear', 'PreviousTotal'], inplace=True)
 
 
 # Write dataframes to database
 conn = sqlite3.connect("C:\\Users\\nochum.paltiel\\Documents\\PycharmProjects\\anchor_scripts\\churn.db")
 
 # Create all tables
-results_df.to_sql("patient_churn_results", conn, if_exists='replace', index=False)
+patients_df.to_sql("patient_churn", conn, if_exists='replace', index=False)
 caregiver_df.to_sql("caregiver_churn", conn, if_exists='replace', index=False)
 
 conn.close()
