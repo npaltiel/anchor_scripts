@@ -1,10 +1,10 @@
 import pandas as pd
 import sqlite3
 
-df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\List of Patients.csv")
-df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\Contract Lookup.csv")
-df_2023 = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\Visit_Report_2023.csv")
-df_2024 = pd.read_csv("C:\\Users\\nochum.paltiel\\Documents\\Churn Report\\Visit_Report_2024.csv")
+df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\David - Nochum\\Churn Report\\List of Patients.csv")
+df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\David - Nochum\\Churn Report\\Contract Lookup.csv")
+df_2023 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\David - Nochum\\Churn Report\\Visit_Report_2023.csv")
+df_2024 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\David - Nochum\\Churn Report\\Visit_Report_2024.csv")
 
 visits_df = pd.concat([df_2024, df_2023])
 
@@ -19,9 +19,11 @@ caregiver_df = visits_df[['CaregiverName_Code', 'Month', 'Year']].copy()
 split_df = visits_df['CaregiverName_Code'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')
 caregiver_df[['CaregiverName', 'CaregiverCode']] = split_df[[0, 1]]
+# Get rid of CDPAP
+caregiver_df = caregiver_df[~caregiver_df['CaregiverCode'].str.contains('CDP', case=False, na=False)]
 
 # Drop Duplicates within each month
-caregiver_df= caregiver_df.drop_duplicates(subset=['CaregiverCode', 'Month', 'Year']).reset_index(drop=True)
+caregiver_df = caregiver_df.drop_duplicates(subset=['CaregiverCode', 'Month', 'Year']).reset_index(drop=True)
 
 # Create a column for the previous month and year
 caregiver_df['PreviousMonth'] = caregiver_df['Month'] - 1
@@ -138,7 +140,7 @@ visits_df['Earlier (Total)'] = visits_df.groupby(['UniqueID']).cumcount() > 0
 visits_df.reset_index(inplace=True, drop=True)
 
 # Work with only columns I require
-patients_df = visits_df[['Month', 'Year', 'ContractType', 'UniqueID', 'PatientName', 'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
+patients_df = visits_df[['Month', 'Year','Branch', 'ContractType', 'UniqueID', 'PatientName', 'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
 
 # Get Metrics I need
 patients_df['Continued (Category)'] = [1 if patients_df['Previous (Category)'][i] == True else 0 for i in range(len(patients_df))]
@@ -148,7 +150,7 @@ patients_df['Retained (Total)'] = [1 if patients_df['Previous (Total)'][i] != Tr
 patients_df['New (Category)'] = [1 if patients_df['Earlier (Category)'][i] != True else 0 for i in range(len(patients_df))]
 patients_df['New (Total)'] = [1 if patients_df['Earlier (Total)'][i] != True else 0 for i in range(len(patients_df))]
 
-patients_df.drop(columns=['Previous (Category)', 'Previous (Total)', 'Previous (Category)', 'Previous (Total)', 'Earlier (Category)','Earlier (Total)'], inplace=True)
+# patients_df.drop(columns=['Previous (Category)', 'Previous (Total)', 'Earlier (Category)','Earlier (Total)'], inplace=True)
 
 # # Generate unique combinations of Contract Type, Year, and Month
 # unique_combinations = visits_df[['ContractType', 'Year', 'Month']].drop_duplicates()
