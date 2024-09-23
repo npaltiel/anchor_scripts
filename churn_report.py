@@ -1,14 +1,14 @@
 import pandas as pd
 import sqlite3
 
-df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients.csv")
-df_patients_lehigh = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
+df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\List of Patients.csv")
+df_patients_lehigh = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\List of Patients Lehigh.csv")
 df_patients_lehigh['Medicaid Number'] = df_patients_lehigh['Medicaid Number'].astype(str)
-df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Contract Lookup.csv")
-df_1 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
-df_2 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
-df_3 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_July_Sep.csv")
-df_lehigh = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",dtype={'MedicaidNo': 'S10'})
+df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\Contract Lookup.csv")
+df_1 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\Visit_Report_2023.csv")
+df_2 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\Visit_Report_Jan_June.csv")
+df_3 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\Visit_Report_July_Sep.csv")
+df_lehigh = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\Visit_Report_Lehigh.csv",dtype={'MedicaidNo': 'S10'})
 df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
 
 df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
