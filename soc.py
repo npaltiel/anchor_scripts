@@ -4,10 +4,10 @@ from dateutil.relativedelta import relativedelta
 from spire.xls import *
 from spire.xls.common import *
 
-df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\List of Patients.csv")
-df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\Contract Lookup.csv")
-prev_df= pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\SOC\\Visit_Report_6Month.csv")
-cur_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\SOC\\Visit_Report_LastMonth.csv")
+df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients.csv")
+df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Contract Lookup.csv")
+prev_df= pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_6Month.csv")
+cur_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_LastMonth.csv")
 
 prev_df = prev_df[prev_df['MissedVisit'] == 'No']
 cur_df = cur_df[cur_df['MissedVisit'] == 'No']
@@ -69,13 +69,13 @@ for i in range(len(prev_df)):
 
 soc_df = cur_df[~cur_df['UniqueID'].isin(prev_ids)][['AdmissionID','First Name', 'Last Name', 'Branch_Updated','ContractName','ContractType','Team','Date of Birth','Status']].copy()
 # Output Excel file path
-excel_file = 'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\SOC\\soc_sep.xlsx'
+excel_file = 'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_sep.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 
 
 workbook = Workbook()
-workbook.LoadFromFile('C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\SOC\\soc_sep.xlsx')
+workbook.LoadFromFile('C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_sep.xlsx')
 data_sheet = workbook.Worksheets[0]
 rnge = 'A1:I'+str(len(soc_df)+1)
 cellRange = data_sheet.Range[rnge]
@@ -94,5 +94,5 @@ teamField = pivotTable.PivotFields["Team"]
 teamField.SortType = PivotFieldSortType.Ascending
 
 pivotTable.BuiltInStyle = PivotBuiltInStyles.PivotStyleMedium11
-workbook.SaveToFile('C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Reports\\Churn Report\\SOC\\soc_sep.xlsx', ExcelVersion.Version2016)
+workbook.SaveToFile('C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_sep.xlsx', ExcelVersion.Version2016)
 workbook.Dispose()
