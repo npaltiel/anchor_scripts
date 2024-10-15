@@ -1,19 +1,24 @@
 import pandas as pd
 import sqlite3
+from datetime import date, datetime
+from dateutil.relativedelta import relativedelta
 
-df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients.csv")
+df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_patients_lehigh = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
 df_patients_lehigh['Medicaid Number'] = df_patients_lehigh['Medicaid Number'].astype(str)
-df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Contract Lookup.csv")
+df_contracts = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 df_1 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
 df_2 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
 df_3 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_July_Sep.csv")
+df_4 = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Aug_Oct.csv")
 df_lehigh = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",dtype={'MedicaidNo': 'S10'})
 df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
 
 df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
 
-visits_df = pd.concat([df_1, df_2, df_3, df_lehigh])
+df_4 = df_4[df_4['Billed']=='Yes']
+
+visits_df = pd.concat([df_1, df_2, df_3, df_4, df_lehigh])
 
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
 visits_df['Year'] = pd.DatetimeIndex(visits_df['VisitDate']).year
@@ -84,9 +89,9 @@ visits_df = visits_df.drop_duplicates(subset=['AdmissionID', 'Month', 'Year'])
 # Lookup contracts and patient information from relevant sources
 visits_df = pd.merge(visits_df, df_contracts, on='ContractName', how='left')
 visits_df['ContractType'] = visits_df['ContractType'].fillna('Unknown')
-visits_df = pd.merge(visits_df, df_patients, left_on='AdmissionID', right_on='Admission ID', how='left')
+visits_df = pd.merge(visits_df, df_patients, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
 visits_df = pd.merge(visits_df, df_patients_lehigh, left_on='MedicaidNo', right_on='Medicaid Number', how='left', suffixes=('','_lehigh'))
-visits_df['Date of Birth'] = visits_df['Date of Birth'].combine_first(visits_df['Date of Birth_lehigh'])
+visits_df['Date of Birth'] = visits_df['DOB'].combine_first(visits_df['Date of Birth'])
 
 visits_df['MedicaidNo'] = visits_df['MedicaidNo'].str.replace(r'\.0$', '', regex=True)
 
@@ -154,8 +159,15 @@ visits_df['Earlier (Category)'] = visits_df.groupby(['UniqueID', 'ContractType']
 visits_df['Earlier (Total)'] = visits_df.groupby(['UniqueID']).cumcount() > 0
 visits_df.reset_index(inplace=True, drop=True)
 
+visits_df['Branch_Updated'] = [
+    'Baby' if pd.notna(visits_df['Date of Birth'][i]) and
+    datetime.strptime(visits_df['Date of Birth'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
+    else visits_df['Branch'][i]
+    for i in range(len(visits_df))
+]
+
 # Work with only columns I require
-patients_df = visits_df[['Month', 'Year','Branch', 'ContractType', 'UniqueID', 'PatientName', 'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
+patients_df = visits_df[['Month', 'Year','Branch_Updated', 'ContractType', 'UniqueID', 'PatientName', 'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
 
 # Get Metrics I need
 patients_df['Continued (Category)'] = [1 if patients_df['Previous (Category)'][i] == True else 0 for i in range(len(patients_df))]
