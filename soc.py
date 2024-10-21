@@ -32,6 +32,9 @@ cur_df['ContractType'] = cur_df['ContractType'].fillna('Unknown')
 prev_df = pd.merge(prev_df, df_patients, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
 cur_df = pd.merge(cur_df, df_patients, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
 
+prev_df['MedicaidNo'] = prev_df['MedicaidNo'].str.lstrip('0')
+cur_df['MedicaidNo'] = cur_df['MedicaidNo'].str.lstrip('0')
+
 # Create unique ID
 prev_df['UniqueID'] = [
     prev_df['MedicaidNo'][i] if pd.notna(prev_df['MedicaidNo'][i]) else prev_df['PatientName'][
@@ -68,15 +71,15 @@ prev_ids = []
 for i in range(len(prev_df)):
     prev_ids.append(prev_df['UniqueID'][i])
 
-soc_df = cur_df[~cur_df['UniqueID'].isin(prev_ids)][['AdmissionID','First Name', 'Last Name', 'Branch_Updated','ContractName','ContractType','Team','DOB','Status']].copy()
-# Output Excel file path
-excel_file = 'C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct.xlsx'
+soc_df = cur_df[~cur_df['UniqueID'].isin(prev_ids)][['AdmissionID','First Name', 'Last Name', 'VisitDate', 'Branch_Updated','ContractName','ContractType','Team','DOB','Status']].copy()
+#Output Excel file path
+excel_file = 'C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct2.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 
 
 workbook = Workbook()
-workbook.LoadFromFile('C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct.xlsx')
+workbook.LoadFromFile('C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct2.xlsx')
 data_sheet = workbook.Worksheets[0]
 rnge = 'A1:I'+str(len(soc_df)+1)
 cellRange = data_sheet.Range[rnge]
@@ -95,5 +98,5 @@ teamField = pivotTable.PivotFields["Team"]
 teamField.SortType = PivotFieldSortType.Ascending
 
 pivotTable.BuiltInStyle = PivotBuiltInStyles.PivotStyleMedium11
-workbook.SaveToFile('C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct.xlsx', ExcelVersion.Version2016)
+workbook.SaveToFile('C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct2.xlsx', ExcelVersion.Version2016)
 workbook.Dispose()
