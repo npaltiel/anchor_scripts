@@ -16,11 +16,10 @@ df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
 
 df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
 
-df_4 = df_4[df_4['Billed']=='Yes']
-
 visits_df = pd.concat([df_1, df_2, df_3, df_4, df_lehigh])
 
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
+visits_df = visits_df[visits_df['Billed'] == 'Yes']
 visits_df['Year'] = pd.DatetimeIndex(visits_df['VisitDate']).year
 visits_df['Month'] = pd.DatetimeIndex(visits_df['VisitDate']).month
 
@@ -94,6 +93,7 @@ visits_df = pd.merge(visits_df, df_patients_lehigh, left_on='MedicaidNo', right_
 visits_df['Date of Birth'] = visits_df['DOB'].combine_first(visits_df['Date of Birth'])
 
 visits_df['MedicaidNo'] = visits_df['MedicaidNo'].str.replace(r'\.0$', '', regex=True)
+visits_df['MedicaidNo'] = visits_df['MedicaidNo'].str.lstrip('0')
 
 # Create unique ID
 visits_df['UniqueID'] = [
@@ -161,7 +161,8 @@ visits_df.reset_index(inplace=True, drop=True)
 
 visits_df['Branch_Updated'] = [
     'Baby' if pd.notna(visits_df['Date of Birth'][i]) and
-    datetime.strptime(visits_df['Date of Birth'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
+    datetime.strptime(visits_df['Date of Birth'][i].strip(), "%m/%d/%Y").date() >= pd.Timestamp(visits_df['VisitDate'][i]).date() - relativedelta(years=3)
+        and visits_df['Branch'][i] != 'Code 95'
     else visits_df['Branch'][i]
     for i in range(len(visits_df))
 ]
@@ -176,6 +177,8 @@ patients_df['Retained (Category)'] = [1 if patients_df['Previous (Category)'][i]
 patients_df['Retained (Total)'] = [1 if patients_df['Previous (Total)'][i] != True and patients_df['Earlier (Total)'][i] == True else 0 for i in range(len(patients_df))]
 patients_df['New (Category)'] = [1 if patients_df['Earlier (Category)'][i] != True else 0 for i in range(len(patients_df))]
 patients_df['New (Total)'] = [1 if patients_df['Earlier (Total)'][i] != True else 0 for i in range(len(patients_df))]
+
+patients_df = patients_df[patients_df['ContractType']!='Unknown']
 
 patients_pa = patients_df[patients_df['ContractType']=='PA']
 patients_df = patients_df[~(patients_df['ContractType']=='PA')]
