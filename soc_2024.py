@@ -18,7 +18,7 @@ df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
 visits_df = pd.concat([df_1, df_2, df_3, df_4, df_lehigh])
 
 # Convert VisitDate to datetime format
-visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
+visits_df.loc[:, 'VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
 
 # Filter out missed visits
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
