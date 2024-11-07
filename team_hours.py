@@ -5,7 +5,6 @@ from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 month = datetime.today() - relativedelta(months=1)
-month = 'July'
 
 
 def convert_hours(value):
@@ -47,7 +46,7 @@ earliest_start_date = df_patients.groupby(['UniqueID']).agg({
 
 # Get Medicaid, Team and County
 df_patients = df_patients[
-    ['Admission ID - Office', 'Contract Name', 'UniqueID', 'Team', 'County']]
+    ['Admission ID - Office', 'Contract Name', 'UniqueID', 'Team', 'County', 'Branch']]
 df_patients = df_patients.groupby(['Admission ID - Office', 'Contract Name'], as_index=False).first()
 invoiced_visits = pd.merge(invoiced_visits, df_patients, left_on=['Admission ID', 'Contract'],
                            right_on=['Admission ID - Office', 'Contract Name'],
@@ -61,7 +60,8 @@ team_billed_hours = invoiced_visits.groupby(['Admission ID']).agg({
     'Billed Hours': 'sum',  # Sum of Billed Hours for each Medicaid Number
     'Patient Start Date': 'first',
     'Team': 'first',
-    'County': 'first'
+    'County': 'first',
+    'Branch': 'first'
 }).reset_index()
 
 # Fix IC
@@ -87,6 +87,9 @@ df_contracts = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 team_billed_hours = pd.merge(team_billed_hours, df_contracts, left_on='Contract', right_on='ContractName', how='left')
 team_billed_hours['Contract Type'] = team_billed_hours['ContractType'].fillna('Unknown')
+team_billed_hours['Contract Type'] = [
+    'Cluster' if team_billed_hours['Branch'][i] == 'Cluster' else team_billed_hours['Contract Type'][i] for i in
+    range(len(team_billed_hours))]
 
 boroughs = ['new york', 'kings', 'queens', 'bronx', 'richmond']
 grouping = []
@@ -112,5 +115,5 @@ team_hours_report = \
 # team_hours_report.insert(0, 'Week Ending', week_ending)
 # team_hours_report['Patient Start Date'] = team_hours_report['Patient Start Date'].dt.strftime('%m/%d/%Y')
 
-excel_file = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Team Hours\\Team_Hours_Report_{month}.xlsx"
+excel_file = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Team Hours\\Team Hours Reports\\Team_Hours_Report_{month}.xlsx"
 team_hours_report.to_excel(excel_file, index=False, sheet_name='Sheet1')
