@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import sqlite3
 
+
 # Custom function for hours: Replace ':' with '.', convert to float, and apply the floor + decimal transformation
 def convert_hours(value):
     if isinstance(value, str) and value.strip() == '':
@@ -14,6 +15,7 @@ def convert_hours(value):
         return np.nan
     return np.floor(value).astype(int) + (value % 1) / 0.6
 
+
 # Custom function for dollars: Remove '$', convert to float without any additional transformation
 def convert_dollars(value):
     if isinstance(value, str) and value.strip() == '':
@@ -25,27 +27,40 @@ def convert_dollars(value):
     except ValueError:
         return np.nan
 
+
 # List of hour and dollar columns
 hour_columns = ['Billed Hours', 'Pay Hours', 'OT Hours', 'Holiday Hours', 'Total Paid Hours']
-dollar_columns = ['Billed Rate', 'Billed Rate', 'Pay Rate', 'Billed Amount', 'Paid Amount', 'OT Pay Rate', 'OT Amount', 'Holiday Pay Rate', 'Holiday Amount', 'Total Payroll Amount']  # Replace with actual dollar columns
+dollar_columns = ['Billed Rate', 'Billed Rate', 'Pay Rate', 'Billed Amount', 'Paid Amount', 'OT Pay Rate', 'OT Amount',
+                  'Holiday Pay Rate', 'Holiday Amount', 'Total Payroll Amount']  # Replace with actual dollar columns
 
 # Create a dictionary for converters
 converters = {col: convert_hours for col in hour_columns}
 converters.update({col: convert_dollars for col in dollar_columns})
 
 # Read CSV and apply converters
-#report_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_2023.csv", converters=converters)
-#report_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_Jan_May.csv", converters=converters)
-#report_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_June_August.csv", converters=converters)
-report_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_September.csv", converters=converters)
-patients_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\List of Patients.csv")
-
+# report_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_2023.csv", converters=converters)
+# report_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_Jan_May.csv", converters=converters)
+# report_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_June_August.csv", converters=converters)
+report_df = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll\\Billing_Vs_Payroll_October_CDPAP.csv",
+    converters=converters)
+patients_df = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+patients_df = patients_df[patients_df['Admission ID - Office'].str.contains('CDP', case=False, na=False)]
+patients_df = patients_df.groupby(['Admission ID - Office', 'Contract Name'], as_index=False).first()
+counties_df = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\County Lookup.csv")
 
 # Drop last 2 unnecessary rows
 report_df = report_df[(report_df['Contract'] != 'Grand Total :') & (report_df['Contract'].notna())]
 
+# Get Live In hours into Billed Hours
+report_df['Billed Hours'] = report_df['Billed Hours'] + 13 * report_df['Billed Live-In']
+
 # Get location data from Patients
-report_df = pd.merge(report_df, patients_df, on='Admission ID', how='left')
+report_df = pd.merge(report_df, patients_df, left_on=['Admission ID', 'Contract'],
+                     right_on=['Admission ID - Office', 'Contract Name'], how='left')
+report_df = pd.merge(report_df, counties_df, on='County', how='left')
 
 '''# Get Discipline/Get rid of RN
 ####################
@@ -73,10 +88,26 @@ for i in range(len(report_df)):
         wp_amount = 0.6
     wp.append(wp_amount * wp_hours)
 
-
 report_df['Office'] = office
 report_df['Tax'] = report_df['Total Payroll Amount'] * 0.13
 report_df['Wage Parity'] = wp
+report_df['Overhead'] = 3.49 * report_df['Billed Hours']
+
+pmpm = report_df.groupby('Admission ID', as_index=False)['Billed Hours'].sum()
+total = []
+for i in range(len(pmpm)):
+    if pmpm['Billed Hours'][i] < 160:
+        total.append(146.45)
+    elif pmpm['Billed Hours'][i] < 480:
+        total.append(387.84)
+    else:
+        total.append(1046.36)
+
+pmpm['Total'] = total
+pmpm['PMPM Hourly'] = pmpm['Total'] / pmpm['Billed Hours']
+report_df = pd.merge(report_df, pmpm, on='Admission ID', how='left', suffixes=['', 'pmpm'])
+report_df['PMPM'] = report_df['PMPM Hourly'] * report_df['Billed Hours']
+
 
 def insert_or_replace(table_name, df, conn):
     # Get the columns of the DataFrame
@@ -94,39 +125,40 @@ def insert_or_replace(table_name, df, conn):
 
 report_df.columns = report_df.columns.str.replace(' ', '')
 report_df.columns = report_df.columns.str.replace('-', '')
-report_df.drop(columns=['Unnamed:0'], inplace=True)
+
+conn = sqlite3.connect(
+    "C:\\Users\\nochum.paltiel\\Documents\\PycharmProjects\\anchor_scripts\\billing_vs_payroll_cdpap.db")
 
 
-conn = sqlite3.connect("C:\\Users\\nochum.paltiel\\Documents\\PycharmProjects\\anchor_scripts\\billing_vs_payroll.db")
+def create_table_from_df(table_name, df, conn):
+    # Generate the CREATE TABLE statement based on DataFrame columns and data types
+    col_defs = []
+    for col_name, dtype in df.dtypes.items():
+        if "int" in str(dtype):
+            col_type = "INTEGER"
+        elif "float" in str(dtype):
+            col_type = "REAL"
+        elif "datetime64" in str(dtype):  # Check for datetime64 type
+            col_type = "DATETIME"
+        else:
+            col_type = "TEXT"
+        col_defs.append(f"{col_name} {col_type}")
+
+    columns_sql = ", ".join(col_defs)
+
+    # Add a UNIQUE constraint on all columns combined to ensure the entire row is unique
+    unique_columns_sql = ", ".join(df.columns)
+    unique_constraint_sql = f", UNIQUE({unique_columns_sql})"
+
+    sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql}{unique_constraint_sql})"
+
+    # Execute the SQL statement
+    cur = conn.cursor()
+    cur.execute(sql)
+    conn.commit()
 
 
-# def create_table_from_df(table_name, df, conn):
-#     # Generate the CREATE TABLE statement based on DataFrame columns and data types
-#     col_defs = []
-#     for col_name, dtype in df.dtypes.items():
-#         if "int" in str(dtype):
-#             col_type = "INTEGER"
-#         elif "float" in str(dtype):
-#             col_type = "REAL"
-#         else:
-#             col_type = "TEXT"
-#         col_defs.append(f"{col_name} {col_type}")
-#
-#     columns_sql = ", ".join(col_defs)
-#
-#     # Add a UNIQUE constraint on all columns combined to ensure the entire row is unique
-#     unique_columns_sql = ", ".join(df.columns)
-#     unique_constraint_sql = f", UNIQUE({unique_columns_sql})"
-#
-#     sql = f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql}{unique_constraint_sql})"
-#
-#     # Execute the SQL statement
-#     cur = conn.cursor()
-#     cur.execute(sql)
-#     conn.commit()
-#
-#
-# create_table_from_df("billing_vs_payroll", report_df, conn)
-insert_or_replace("billing_vs_payroll", report_df, conn)
+create_table_from_df("billing_vs_payroll", report_df, conn)
+# insert_or_replace("billing_vs_payroll", report_df, conn)
 
 conn.close()

@@ -4,7 +4,8 @@ import sqlite3
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-month = datetime.today() - relativedelta(months=1)
+# month = datetime.today() - relativedelta(months=1)
+month = 'October'
 
 
 def convert_hours(value):
@@ -54,8 +55,7 @@ invoiced_visits = pd.merge(invoiced_visits, df_patients, left_on=['Admission ID'
 invoiced_visits = pd.merge(invoiced_visits, earliest_start_date, on='UniqueID',
                            how='left')
 
-team_billed_hours = invoiced_visits.groupby(['Admission ID']).agg({
-    'Contract': lambda x: x.mode().iloc[0],
+team_billed_hours = invoiced_visits.groupby(['Admission ID', 'Contract']).agg({
     'UniqueID': 'first',
     'Billed Hours': 'sum',  # Sum of Billed Hours for each Medicaid Number
     'Patient Start Date': 'first',
@@ -94,13 +94,10 @@ team_billed_hours['Contract Type'] = [
 boroughs = ['new york', 'kings', 'queens', 'bronx', 'richmond']
 grouping = []
 for i in range(len(team_billed_hours)):
-    if team_billed_hours['Patient Start Date'][i] < pd.to_datetime('2024-09-01'):
-        grouping.append('Prior to Sep 1')
+    if team_billed_hours['County'][i] is not None and team_billed_hours['County'][i].lower() in boroughs:
+        grouping.append('In 5 Boroughs')
     else:
-        if team_billed_hours['County'][i] is not None and team_billed_hours['County'][i].lower() in boroughs:
-            grouping.append('In 5 Boroughs')
-        else:
-            grouping.append('Outside 5 Boroughs')
+        grouping.append('Outside 5 Boroughs')
 team_billed_hours['Group'] = grouping
 
 # Final Report

@@ -4,10 +4,14 @@ from dateutil.relativedelta import relativedelta
 from spire.xls import *
 from spire.xls.common import *
 
-df_patients = pd.read_csv("C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
-df_contracts = pd.read_csv("C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
-prev_df= pd.read_csv("C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_6Month.csv")
-cur_df = pd.read_csv("C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_LastMonth.csv")
+df_patients = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+df_contracts = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+prev_df = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_6Month.csv")
+cur_df = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_LastMonth.csv")
 
 prev_df = prev_df[prev_df['MissedVisit'] == 'No']
 cur_df = cur_df[cur_df['MissedVisit'] == 'No']
@@ -38,26 +42,26 @@ cur_df['MedicaidNo'] = cur_df['MedicaidNo'].str.lstrip('0')
 # Create unique ID
 prev_df['UniqueID'] = [
     prev_df['MedicaidNo'][i] if pd.notna(prev_df['MedicaidNo'][i]) else prev_df['PatientName'][
-                                                                                        i] + str(
+                                                                            i] + str(
         prev_df['DOB'][i]) for i in range(len(prev_df))]
 
 # Create unique ID
 cur_df['UniqueID'] = [
     cur_df['MedicaidNo'][i] if pd.notna(cur_df['MedicaidNo'][i]) else cur_df['PatientName'][
-                                                                                        i] + str(
+                                                                          i] + str(
         cur_df['DOB'][i]) for i in range(len(cur_df))]
 
 # Create Baby Branch
 cur_df['Branch_Updated'] = [
     'Baby' if pd.notna(cur_df['DOB'][i]) and
-    datetime.strptime(cur_df['DOB'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
+              datetime.strptime(cur_df['DOB'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
     else cur_df['Branch'][i]
     for i in range(len(cur_df))
 ]
 # Create Baby Branch
 prev_df['Branch_Updated'] = [
     'Baby' if pd.notna(prev_df['DOB'][i]) and
-    datetime.strptime(prev_df['DOB'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
+              datetime.strptime(prev_df['DOB'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
     else prev_df['Branch'][i]
     for i in range(len(prev_df))
 ]
@@ -71,22 +75,27 @@ prev_ids = []
 for i in range(len(prev_df)):
     prev_ids.append(prev_df['UniqueID'][i])
 
-soc_df = cur_df[~cur_df['UniqueID'].isin(prev_ids)][['AdmissionID','First Name', 'Last Name', 'VisitDate', 'Branch_Updated','ContractName','ContractType','Team','DOB','Status']].copy()
-#Output Excel file path
-excel_file = 'C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct2.xlsx'
+soc_df = cur_df[~cur_df['UniqueID'].isin(prev_ids)][
+    ['AdmissionID', 'First Name', 'Last Name', 'VisitDate', 'Branch_Updated', 'ContractName', 'ContractType', 'Team',
+     'DOB', 'Status']].copy()
+
+soc_df.rename(columns={'VisitDate': 'FirstVisitDate'}, inplace=True)
+
+# Output Excel file path
+month = datetime.today().strftime('%b')
+excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 
-
 workbook = Workbook()
-workbook.LoadFromFile('C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct2.xlsx')
+workbook.LoadFromFile(excel_file)
 data_sheet = workbook.Worksheets[0]
-rnge = 'A1:I'+str(len(soc_df)+1)
+rnge = 'A1:J' + str(len(soc_df) + 1)
 cellRange = data_sheet.Range[rnge]
 
 pivotCache = workbook.PivotCaches.Add(cellRange)
 pivot_sheet = workbook.Worksheets.Add("Pivot")
-pivotTable = pivot_sheet.PivotTables.Add("Pivot Table", pivot_sheet.Range["C6"], pivotCache)
+pivotTable = pivot_sheet.PivotTables.Add("Pivot Table", pivot_sheet.Range["B3"], pivotCache)
 pivotTable.Options.RowHeaderCaption = "Row Labels"
 regionField = pivotTable.PivotFields["Team"]
 regionField.Axis = AxisTypes.Row
@@ -98,5 +107,5 @@ teamField = pivotTable.PivotFields["Team"]
 teamField.SortType = PivotFieldSortType.Ascending
 
 pivotTable.BuiltInStyle = PivotBuiltInStyles.PivotStyleMedium11
-workbook.SaveToFile('C:\\Users\\Nochum\\OneDrive\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_oct2.xlsx', ExcelVersion.Version2016)
+workbook.SaveToFile(excel_file, ExcelVersion.Version2016)
 workbook.Dispose()
