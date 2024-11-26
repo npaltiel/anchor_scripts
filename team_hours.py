@@ -26,7 +26,7 @@ converters = {col: convert_hours for col in hour_columns}
 df_patients = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 invoiced_visits = pd.read_excel(
-    f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Team Hours\\Billing_Vs_Payroll_{month}.xlsx",
+    f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (All)\\Billing_Vs_Payroll_{month}.xlsx",
     sheet_name='Detail Data', converters=converters)
 
 invoiced_visits = invoiced_visits[invoiced_visits['Contract'] != 'Grand Total :']
