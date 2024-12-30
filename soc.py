@@ -5,13 +5,13 @@ from spire.xls import *
 from spire.xls.common import *
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 prev_df = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_6Month.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_6Month.csv")
 cur_df = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_LastMonth.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_LastMonth.csv")
 
 prev_df = prev_df[prev_df['MissedVisit'] == 'No']
 cur_df = cur_df[cur_df['MissedVisit'] == 'No']
@@ -54,14 +54,14 @@ cur_df['UniqueID'] = [
 # Create Baby Branch
 cur_df['Branch_Updated'] = [
     'Baby' if pd.notna(cur_df['DOB'][i]) and
-              datetime.strptime(cur_df['DOB'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
+              datetime.strptime(cur_df['DOB'][i].strip(), "%m/%d/%Y %I:%M:%S %p").date() >= date.today() - relativedelta(years=2)
     else cur_df['Branch'][i]
     for i in range(len(cur_df))
 ]
 # Create Baby Branch
 prev_df['Branch_Updated'] = [
     'Baby' if pd.notna(prev_df['DOB'][i]) and
-              datetime.strptime(prev_df['DOB'][i].strip(), "%m/%d/%Y").date() >= date.today() - relativedelta(years=2)
+              datetime.strptime(prev_df['DOB'][i].strip(), "%m/%d/%Y %I:%M:%S %p").date() >= date.today() - relativedelta(years=2)
     else prev_df['Branch'][i]
     for i in range(len(prev_df))
 ]
@@ -83,7 +83,7 @@ soc_df.rename(columns={'VisitDate': 'FirstVisitDate'}, inplace=True)
 
 # Output Excel file path
 month = datetime.today().strftime('%b')
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}.xlsx'
+excel_file = f'C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 

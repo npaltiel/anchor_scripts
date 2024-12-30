@@ -2,8 +2,8 @@ import pandas as pd
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
-df_patients = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
-visits_df = pd.read_csv("C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit_Report_2024.csv")
+df_patients = pd.read_csv("C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+visits_df = pd.read_csv("C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit_Report_2024.csv")
 
 # Filter out missed visits and for NHTD
 visits_df = visits_df[(visits_df['ContractName'] == 'NHTD') | (visits_df['ContractName'] == 'TBI')]
