@@ -76,3 +76,29 @@ prev_ids_df.to_csv(
 excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\All Patients - {current.month} {current.year}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 nhtd_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
+
+agencies_df = pd.read_excel(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\NEW MASTER.xlsx",
+    sheet_name="Active ")
+
+agencies_df = agencies_df[["Patient Name", "SC Agency", "Start date with SC", "Previous SC", "CIN", "Trans/Diversion "]]
+agencies_df['Start date with SC'] = pd.to_datetime(agencies_df['Start date with SC'], errors='coerce')
+
+last_month_28th = (datetime.today().replace(day=1) - timedelta(days=1)).replace(day=28)
+agencies_df['Current SC'] = [
+    agencies_df["SC Agency"][i].strip() if pd.isna(agencies_df['Start date with SC'][i]) or
+                                           agencies_df['Start date with SC'][
+                                               i] <= last_month_28th else agencies_df["Previous SC"][i].strip() for i in
+    range(len(agencies_df))]
+
+discharged1_df = pd.read_excel(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\NEW MASTER.xlsx",
+    sheet_name=" Anchor Discharged")
+discharged2_df = pd.read_excel(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\NEW MASTER.xlsx",
+    sheet_name="Abode Discharged")
+discharged3_df = pd.read_excel(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\NEW MASTER.xlsx",
+    sheet_name="Attentive Discharged")
+
+nhtd_df = nhtd_df.merge(agencies_df[['CIN', 'Current SC']], left_on='MedicaidNo', right_on='CIN', how='left')
