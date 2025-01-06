@@ -4,6 +4,7 @@ import os
 from openpyxl import load_workbook
 from openpyxl.worksheet.datavalidation import DataValidation
 from openpyxl.utils import get_column_letter
+from openpyxl.styles import Alignment
 
 current = datetime.now() - timedelta(days=30)
 
@@ -85,6 +86,22 @@ def manage_excel_file(file_path, sheet_name, df):
     # Add validations to the sheet
     sheet.add_data_validation(category_validation)
     sheet.add_data_validation(approved_validation)
+
+    # Left-align the first row
+    for cell in sheet[1]:
+        cell.alignment = Alignment(horizontal='left')
+
+    # Resize columns to fit the content
+    for col in sheet.columns:
+        max_length = 0
+        col_letter = col[0].column_letter  # Get column letter
+        for cell in col:
+            try:
+                if cell.value:
+                    max_length = max(max_length, len(str(cell.value)))
+            except:
+                pass
+        sheet.column_dimensions[col_letter].width = max_length + 2  # Add padding for better fit
 
     # Save the workbook
     workbook.save(file_path)
