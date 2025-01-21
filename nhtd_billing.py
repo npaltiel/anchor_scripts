@@ -22,6 +22,11 @@ concat_column = 'Diagnosis Code -Clinical'
 # Dynamically create the aggregation dictionary
 aggregation_functions = {col: 'first' for col in df_patients.columns}
 # Group by 'key' and apply the aggregation functions
+df_patients = df_patients[
+    (~df_patients['Admission ID - Office'].str.contains("CDP", na=False)) &
+    (~df_patients['Admission ID - Office'].str.contains("ANS", na=False)) &
+    (~df_patients['Admission ID - Office'].str.contains("OHZ", na=False))
+    ].copy().reset_index(drop=True)
 df_patients_agg = df_patients.groupby('Admission ID - Office', as_index=False).agg(aggregation_functions)
 
 visits_df = pd.merge(visits_df, df_patients_agg, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
@@ -61,27 +66,14 @@ nhtd_df = cur_df[
 nhtd_df['Gender'] = [nhtd_df['Gender'][i][0] for i in range(len(nhtd_df))]
 nhtd_df['Visit Date'] = [f'{current.month}/1/{current.year}' if nhtd_df['MedicaidNo'][i] in prev_ids else "" for i in
                          range(len(nhtd_df))]
-nhtd_df['DOB'] = pd.to_datetime(nhtd_df['DOB'], format='%m/%d/%Y %I:%M:%S %p', errors='coerce').dt.strftime('%m/%d/%Y')
-
-for i in range(len(nhtd_df)):
-    prev_ids.append(nhtd_df['MedicaidNo'][i])
-
-prev_ids_df = pd.DataFrame(prev_ids, columns=['MedicaidNo'])
-prev_ids_df = prev_ids_df.drop_duplicates(subset=['MedicaidNo']).reset_index(drop=True)
-prev_ids_df.to_csv(
-    'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\List of Patients.csv',
-    index=False)
-
-# Output Excel file path
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\All Patients - {current.month} {current.year}.xlsx'
-# Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
-nhtd_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
+nhtd_df['DOB'] = pd.to_datetime(nhtd_df['DOB'], errors='coerce').dt.strftime('%m/%d/%Y')
 
 agencies_df = pd.read_excel(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\NEW MASTER.xlsx",
     sheet_name="Active ")
 
-agencies_df = agencies_df[["Patient Name", "SC Agency", "Start date with SC", "Previous SC", "CIN", "Trans/Diversion "]]
+agencies_df = agencies_df[
+    ["Patient Name", "SC Agency", "Start date with SC", "Previous SC", "CIN", "Trans/Diversion ", "HCSS agency"]]
 agencies_df['Start date with SC'] = pd.to_datetime(agencies_df['Start date with SC'], errors='coerce')
 
 last_month_28th = (datetime.today().replace(day=1) - timedelta(days=1)).replace(day=28)
@@ -97,8 +89,77 @@ discharged1_df = pd.read_excel(
 discharged2_df = pd.read_excel(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\NEW MASTER.xlsx",
     sheet_name="Abode Discharged")
+discharged2_df['SC Agency'] = 'Abode'
 discharged3_df = pd.read_excel(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\NEW MASTER.xlsx",
     sheet_name="Attentive Discharged")
+discharged3_df['SC Agency'] = 'Attentive'
 
-nhtd_df = nhtd_df.merge(agencies_df[['CIN', 'Current SC']], left_on='MedicaidNo', right_on='CIN', how='left')
+nhtd_df = nhtd_df.merge(agencies_df[['CIN', 'Current SC', 'Trans/Diversion ']], left_on='MedicaidNo', right_on='CIN',
+                        how='left')
+nhtd_df = nhtd_df.merge(discharged1_df[['Admission ID', 'SC Agency']], left_on='AdmissionID',
+                        right_on='Admission ID',
+                        how='left')
+nhtd_df = nhtd_df.merge(discharged2_df[['CIN', 'SC Agency']], left_on='MedicaidNo', right_on='CIN',
+                        how='left')
+nhtd_df = nhtd_df.merge(discharged3_df[['CIN', 'SC Agency']], left_on='MedicaidNo', right_on='CIN',
+                        how='left')
+nhtd_df['Visit Type'] = ["SC monthly visit" if nhtd_df['MedicaidNo'][i] in prev_ids else nhtd_df['Trans/Diversion '][i]
+                         for i in
+                         range(len(nhtd_df))]
+
+for i in range(len(nhtd_df)):
+    prev_ids.append(nhtd_df['MedicaidNo'][i])
+
+prev_ids_df = pd.DataFrame(prev_ids, columns=['MedicaidNo'])
+prev_ids_df = prev_ids_df.drop_duplicates(subset=['MedicaidNo']).reset_index(drop=True)
+prev_ids_df.to_csv(
+    'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\List of Patients.csv',
+    index=False)
+
+start_of_month = datetime(datetime.today().year, datetime.today().month, 1)
+service_only = agencies_df[(~agencies_df['CIN'].isin(nhtd_df['MedicaidNo'])) &
+                           (agencies_df['Start date with SC'] < start_of_month) &
+                           (~agencies_df['HCSS agency'].str.contains('Anchor', case=False))]
+
+df_patients_agg = df_patients_agg.groupby('Medicaid Number', as_index=False).agg(aggregation_functions)
+service_only = pd.merge(service_only, df_patients_agg, left_on='CIN', right_on='Medicaid Number', how='left')
+service_only['Address'] = service_only['Address Line 1'].fillna('').str.title() + ' ' + service_only[
+    'Address Line 2'].fillna(
+    '').str.title()
+service_only['City, State'] = service_only['City'].fillna('').str.title() + ', ' + service_only['State'].fillna(
+    '').str.title()
+service_only = service_only.rename(columns={
+    'Admission ID - Office': 'AdmissionID',
+    'Medicaid Number': 'MedicaidNo'
+})
+service_only['MedicaidNo'] = (
+    service_only['CIN']
+    .fillna(service_only['MedicaidNo'])
+)
+service_only['Visit Type'] = 'Service Only'
+service_only = service_only[
+    ['Current SC', 'Last Name', 'First Name', 'Address', 'City, State', 'Zip', 'DOB', 'Diagnosis Code -Clinical',
+     'Gender',
+     'AdmissionID', 'MedicaidNo', 'Visit Type']]
+service_only['Gender'] = [
+    gender[0] if pd.notna(gender) else gender
+    for gender in service_only['Gender']
+]
+
+nhtd_df['Current SC'] = (
+    nhtd_df['Current SC']
+    .fillna(nhtd_df['SC Agency_x'])
+    .fillna(nhtd_df['SC Agency_y'])
+    .fillna(nhtd_df['SC Agency'])
+)
+nhtd_df = nhtd_df[
+    ['Current SC', 'Last Name', 'First Name', 'Address', 'City, State', 'Zip', 'DOB', 'Diagnosis Code -Clinical',
+     'Gender',
+     'AdmissionID', 'MedicaidNo', 'Visit Date', 'Visit Type']]
+nhtd_df = pd.concat([nhtd_df, service_only], ignore_index=True)
+
+# Output Excel file path
+excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\All Patients - {current.month} {current.year}.xlsx'
+# Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
+nhtd_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
