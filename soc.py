@@ -5,68 +5,52 @@ from spire.xls import *
 from spire.xls.common import *
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
-prev_df = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_6Month.csv")
-cur_df = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_LastMonth.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+visits_df = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_7Month.csv",
+    low_memory=False)
 
-prev_df = prev_df[prev_df['MissedVisit'] == 'No']
-cur_df = cur_df[cur_df['MissedVisit'] == 'No']
+visits_df = visits_df[visits_df['MissedVisit'] == 'No']
 
 # Patient Churn
 # Split patient name and admission id
-split_df = prev_df['PatientName'].str.split('(', expand=True)
+split_df = visits_df['PatientName'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')
-prev_df[['PatientName', 'AdmissionID']] = split_df[[0, 1]]
-
-split_df = cur_df['PatientName'].str.split('(', expand=True)
-split_df[1] = split_df[1].str.replace(')', '')
-cur_df[['PatientName', 'AdmissionID']] = split_df[[0, 1]]
+visits_df[['PatientName', 'AdmissionID']] = split_df[[0, 1]]
 
 # Lookup contracts and patient information from relevant sources
-prev_df = pd.merge(prev_df, df_contracts, on='ContractName', how='left')
-prev_df['ContractType'] = prev_df['ContractType'].fillna('Unknown')
-# Lookup contracts and patient information from relevant sources
-cur_df = pd.merge(cur_df, df_contracts, on='ContractName', how='left')
-cur_df['ContractType'] = cur_df['ContractType'].fillna('Unknown')
+visits_df = pd.merge(visits_df, df_contracts, on='ContractName', how='left')
+visits_df['ContractType'] = visits_df['ContractType'].fillna('Unknown')
 
-prev_df = pd.merge(prev_df, df_patients, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
-cur_df = pd.merge(cur_df, df_patients, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
+visits_df = pd.merge(visits_df, df_patients, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
 
-prev_df['MedicaidNo'] = prev_df['MedicaidNo'].str.lstrip('0')
-cur_df['MedicaidNo'] = cur_df['MedicaidNo'].str.lstrip('0')
+visits_df['MedicaidNo'] = visits_df['MedicaidNo'].str.lstrip('0')
 
 # Create unique ID
-prev_df['UniqueID'] = [
-    prev_df['MedicaidNo'][i] if pd.notna(prev_df['MedicaidNo'][i]) else prev_df['PatientName'][
-                                                                            i] + str(
-        prev_df['DOB'][i]) for i in range(len(prev_df))]
-
-# Create unique ID
-cur_df['UniqueID'] = [
-    cur_df['MedicaidNo'][i] if pd.notna(cur_df['MedicaidNo'][i]) else cur_df['PatientName'][
-                                                                          i] + str(
-        cur_df['DOB'][i]) for i in range(len(cur_df))]
+visits_df['UniqueID'] = [
+    visits_df['MedicaidNo'][i] if pd.notna(visits_df['MedicaidNo'][i]) else visits_df['PatientName'][
+                                                                                i] + str(
+        visits_df['DOB'][i]) for i in range(len(visits_df))]
 
 # Create Baby Branch
-cur_df['Branch_Updated'] = [
-    'Baby' if pd.notna(cur_df['DOB'][i]) and
-              datetime.strptime(cur_df['DOB'][i].strip(), "%m/%d/%Y %I:%M:%S %p").date() >= date.today() - relativedelta(years=2)
-    else cur_df['Branch'][i]
-    for i in range(len(cur_df))
-]
-# Create Baby Branch
-prev_df['Branch_Updated'] = [
-    'Baby' if pd.notna(prev_df['DOB'][i]) and
-              datetime.strptime(prev_df['DOB'][i].strip(), "%m/%d/%Y %I:%M:%S %p").date() >= date.today() - relativedelta(years=2)
-    else prev_df['Branch'][i]
-    for i in range(len(prev_df))
+visits_df['Branch_Updated'] = [
+    'Baby' if pd.notna(visits_df['DOB'][i]) and
+              datetime.strptime(visits_df['DOB'][i].strip(),
+                                "%m/%d/%Y %H:%M").date() >= date.today() - relativedelta(years=2)
+    else visits_df['Branch'][i]
+    for i in range(len(visits_df))
 ]
 
-# Again drop duplicates based on Unique ID, Category and the Month
+today = datetime.now()
+sixteenth_of_previous_month = (today.replace(day=1) - pd.DateOffset(months=1)).replace(day=16).date()
+
+visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
+prev_df = visits_df[visits_df['VisitDate'] < pd.Timestamp(sixteenth_of_previous_month)]
+cur_df = visits_df[visits_df['VisitDate'] >= pd.Timestamp(sixteenth_of_previous_month)]
+
+# Drop duplicates based on Unique ID
 prev_df = prev_df.sort_values(by=['VisitDate'])
 prev_df = prev_df.drop_duplicates(subset=['UniqueID']).reset_index(drop=True)
 cur_df = cur_df.drop_duplicates(subset=['UniqueID']).reset_index(drop=True)
@@ -83,7 +67,8 @@ soc_df.rename(columns={'VisitDate': 'FirstVisitDate'}, inplace=True)
 
 # Output Excel file path
 month = datetime.today().strftime('%b')
-excel_file = f'C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}.xlsx'
+year = datetime.today().strftime('%Y')
+excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 
