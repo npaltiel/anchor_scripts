@@ -37,34 +37,34 @@ dollar_columns = ['Billed Rate', 'Billed Rate', 'Pay Rate', 'Billed Amount', 'Pa
 converters = {col: convert_hours for col in hour_columns}
 converters.update({col: convert_dollars for col in dollar_columns})
 
-# Read CSV and apply converters
-df1 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2020.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df2 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2021.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df3 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2022.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df4 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2023_Jan_Jul.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df5 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Aug23.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df6 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Sep23.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df7 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Oct23.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df8 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Nov23.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df9 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Dec23.xlsx",
-    sheet_name='Detail Data', converters=converters)
+# # Read CSV and apply converters
+# df1 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2020.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df2 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2021.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df3 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2022.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df4 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_2023_Jan_Jul.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df5 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Aug23.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df6 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Sep23.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df7 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Oct23.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df8 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Nov23.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df9 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Dec23.xlsx",
+#     sheet_name='Detail Data', converters=converters)
 df10 = pd.read_excel(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_January.xlsx",
     sheet_name='Detail Data', converters=converters)
@@ -89,8 +89,14 @@ df16 = pd.read_excel(
 df17 = pd.read_excel(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Aug_Nov.xlsx",
     sheet_name='Detail Data', converters=converters)
+df19 = pd.read_excel(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_December.xlsx",
+    sheet_name='Detail Data', converters=converters)
+df20 = pd.read_excel(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Jan_25_half.xlsx",
+    sheet_name='Detail Data', converters=converters)
 report_df = pd.concat(
-    [df1, df2, df3, df4, df5, df6, df7, df8, df9, df10, df11, df12, df13, df14, df15, df16, df17])
+    [df10, df11, df12, df13, df14, df15, df16, df17, df19, df20])
 
 patients_df = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
@@ -128,9 +134,9 @@ for i in range(len(report_df)):
 
     wp_hours = report_df['Total Paid Hours'][i] - report_df['Holiday Hours'][i] - report_df['OT Hours'][i]
     if report_df['Location'][i] == 'NYC':
-        wp_amount = max(21.09 - report_df['Pay Rate'][i], 0.6)
+        wp_amount = max(21.64 - report_df['Pay Rate'][i], 0.6)
     elif report_df['Location'][i] == 'Westchester - Long Island':
-        wp_amount = max(20.22 - report_df['Pay Rate'][i], 0.6)
+        wp_amount = max(20.77 - report_df['Pay Rate'][i], 0.6)
     else:
         wp_amount = 0.6
     wp.append(wp_amount * wp_hours)
@@ -175,7 +181,7 @@ report_df.columns = report_df.columns.str.replace(' ', '')
 report_df.columns = report_df.columns.str.replace('-', '')
 report_df.drop(columns=['index'], inplace=True)
 conn = sqlite3.connect(
-    "C:\\Users\\nochum.paltiel\\Documents\\PycharmProjects\\anchor_scripts\\billing_vs_payroll_proj.db")
+    "C:\\Users\\nochum.paltiel\\Documents\\PycharmProjects\\anchor_scripts\\billing_vs_payroll.db")
 
 
 def create_table_from_df(table_name, df, conn):
