@@ -1,11 +1,9 @@
 import pandas as pd
 import numpy as np
-import sqlite3
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-# month = datetime.today() - relativedelta(months=1)
-month = 'October'
+month = (datetime.today() - relativedelta(months=1)).strftime('%B_%Y')
 
 
 def convert_hours(value):
