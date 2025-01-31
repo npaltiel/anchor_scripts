@@ -65,38 +65,42 @@ converters.update({col: convert_dollars for col in dollar_columns})
 # df9 = pd.read_excel(
 #     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Dec23.xlsx",
 #     sheet_name='Detail Data', converters=converters)
-df10 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_January.xlsx",
+# df10 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_January.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df11 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_February.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df12 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_March.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df13 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_April.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df14 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_May.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df15 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_June.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df16 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_July.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df17 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Aug_Nov.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df19 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_December.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+# df20 = pd.read_excel(
+#     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Jan_25_half.xlsx",
+#     sheet_name='Detail Data', converters=converters)
+df21 = pd.read_excel(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Jan25_21_27.xlsx",
     sheet_name='Detail Data', converters=converters)
-df11 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_February.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df12 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_March.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df13 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_April.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df14 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_May.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df15 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_June.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df16 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_July.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df17 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Aug_Nov.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df19 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_December.xlsx",
-    sheet_name='Detail Data', converters=converters)
-df20 = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_Jan_25_half.xlsx",
-    sheet_name='Detail Data', converters=converters)
+
 report_df = pd.concat(
-    [df10, df11, df12, df13, df14, df15, df16, df17, df19, df20])
+    [df21])
 
 patients_df = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
@@ -212,7 +216,7 @@ def create_table_from_df(table_name, df, conn):
     conn.commit()
 
 
-create_table_from_df("billing_vs_payroll", report_df, conn)
+# create_table_from_df("billing_vs_payroll", report_df, conn)
 insert_or_replace("billing_vs_payroll", report_df, conn)
 
 conn.close()
