@@ -26,6 +26,7 @@ df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
 df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
 
 visits_df = pd.concat([df_1, df_2, df_3, df_4, df_lehigh])
+visits_df = visits_df.drop_duplicates(subset=['VisitID']).copy()
 
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
 visits_df = visits_df[visits_df['Billed'] == 'Yes']
@@ -90,8 +91,33 @@ split_df = visits_df['PatientName'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')
 visits_df[['PatientName', 'AdmissionID']] = split_df[[0, 1]]
 
+# Get Patient hours
+hours = visits_df.copy()
+# Split the ScheduleTime column into Start Time and End Time
+hours[['Start Time', 'End Time']] = hours['ScheduleTime'].str.split('-', expand=True)
+
+# Convert to datetime format
+hours['Start Time'] = pd.to_datetime(hours['Start Time'], format='%H%M')
+hours['End Time'] = pd.to_datetime(hours['End Time'], format='%H%M')
+
+# Adjust for overnight cases where End Time is earlier than Start Time
+hours['End Time'] = hours.apply(
+    lambda row: row['End Time'] + pd.Timedelta(days=1) if row['End Time'] < row['Start Time'] else row['End Time'],
+    axis=1)
+
+# Calculate duration in minutes
+hours['Duration (Hours)'] = (hours['End Time'] - hours['Start Time']).dt.total_seconds() / 3600
+
+# Group hours by admission id and month
+grouped_hours = hours.groupby(
+    ['AdmissionID', 'Month', 'Year'], as_index=False
+).agg({'Duration (Hours)': 'sum'})
+
 # Remove visit duplicates within each month
 visits_df = visits_df.drop_duplicates(subset=['AdmissionID', 'Month', 'Year'])
+
+# Get Hours back in
+visits_df = pd.merge(visits_df, grouped_hours, on=['AdmissionID', 'Month', 'Year'], how='left')
 
 # Lookup contracts and patient information from relevant sources
 visits_df = pd.merge(visits_df, df_contracts, on='ContractName', how='left')
@@ -169,18 +195,22 @@ visits_df['Earlier (Category)'] = visits_df.groupby(['UniqueID', 'ContractType']
 visits_df['Earlier (Total)'] = visits_df.groupby(['UniqueID']).cumcount() > 0
 visits_df.reset_index(inplace=True, drop=True)
 
-visits_df['Branch_Updated'] = [
-    'Baby' if pd.notna(visits_df['Date of Birth'][i]) and
-              datetime.strptime(visits_df['Date of Birth'][i].strip(), "%m/%d/%Y %H:%M").date() >= pd.Timestamp(
-        visits_df['VisitDate'][i]).date() - relativedelta(years=3)
-              and visits_df['Branch'][i] != 'Code 95'
-    else visits_df['Branch'][i]
-    for i in range(len(visits_df))
-]
+branch = []
+for i in range(len(visits_df)):
+    if visits_df['Branch'][i] == 'Code 95':
+        branch.append('Code 95')
+    elif pd.notna(visits_df['Date of Birth'][i]) and datetime.strptime(visits_df['Date of Birth'][i].strip(),
+                                                                       "%m/%d/%Y %H:%M").date() >= pd.Timestamp(
+        visits_df['VisitDate'][i]).date() - relativedelta(years=3):
+        branch.append('Baby')
+    else:
+        branch.append("None")
+visits_df['Branch_Updated'] = branch
 
 # Work with only columns I require
 patients_df = visits_df[
-    ['Month', 'Year', 'Branch_Updated', 'ContractType', 'UniqueID', 'PatientName', 'Previous (Category)',
+    ['Month', 'Year', 'Branch_Updated', 'ContractType', 'UniqueID', 'PatientName', 'Duration (Hours)',
+     'Previous (Category)',
      'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
 
 # Get Metrics I need
