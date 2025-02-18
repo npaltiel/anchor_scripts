@@ -70,7 +70,7 @@ total_hours_per_visit.rename(columns={'Pay Detail Hours': 'Total Pay Detail Hour
 # Step 6: Merge summed hours back into the `same_comment` dataframe
 same_comment = same_comment.merge(total_hours_per_visit, on=['Id', 'Pay Detail Begin Date'], how='left')
 
-# Round Visit Duration and Total Pay Detail Hours to the nearest hour
+# Round Visit Duration and Total Pay Detail Hours to the nearest half hour
 same_comment.loc[:, 'Visit Duration'] = np.ceil(same_comment['Visit Duration'] * 2) / 2
 same_comment.loc[:, 'Total Pay Detail Hours'] = np.round(same_comment['Total Pay Detail Hours'] * 2) / 2
 
@@ -110,14 +110,14 @@ total_hours_per_visit.rename(columns={'Pay Detail Hours': 'Total Pay Detail Hour
 # Step 6: Merge summed hours back into the `same_comment` dataframe
 different_comment = different_comment.merge(total_hours_per_visit, on=['Id', 'Pay Detail Begin Date'], how='left')
 
-# Round Visit Duration and Total Pay Detail Hours to the nearest hour
+# Round Visit Duration and Total Pay Detail Hours to the nearest half hour
 different_comment.loc[:, 'Visit Duration'] = np.ceil(different_comment['Visit Duration'] * 2) / 2
 different_comment.loc[:, 'Total Pay Detail Hours'] = np.round(different_comment['Total Pay Detail Hours'] * 2) / 2
 
 # Step 7: Flag visits where total paid hours exceed visit duration
 different_comment['Overpaid Flag'] = np.where(
     (different_comment['Visit Duration'].isna()) | (
-            different_comment['Total Pay Detail Hours'] > different_comment['Visit Duration'] / 2),
+            different_comment['Total Pay Detail Hours'] > different_comment['Visit Duration']),
     True,
     False
 )
