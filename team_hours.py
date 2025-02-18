@@ -3,7 +3,7 @@ import numpy as np
 from datetime import date, datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
-month = (datetime.today() - relativedelta(months=1)).strftime('%B_%Y')
+month_year = (datetime.today() - relativedelta(months=1)).strftime('%b_%Y')
 
 
 def convert_hours(value):
@@ -24,7 +24,7 @@ converters = {col: convert_hours for col in hour_columns}
 df_patients = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 invoiced_visits = pd.read_excel(
-    f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (All)\\Billing_Vs_Payroll_{month}.xlsx",
+    f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Billing vs Payroll Monthly Reports (Invoice Date)\\Billing_Vs_Payroll_{month_year}.xlsx",
     sheet_name='Detail Data', converters=converters)
 
 invoiced_visits = invoiced_visits[invoiced_visits['Contract'] != 'Grand Total :']
@@ -110,5 +110,5 @@ team_hours_report = \
 # team_hours_report.insert(0, 'Week Ending', week_ending)
 # team_hours_report['Patient Start Date'] = team_hours_report['Patient Start Date'].dt.strftime('%m/%d/%Y')
 
-excel_file = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Team Hours\\Team Hours Reports\\Team_Hours_Report_{month}.xlsx"
+excel_file = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Team Hours\\Team Hours Reports\\Team_Hours_Report_{month_year}.xlsx"
 team_hours_report.to_excel(excel_file, index=False, sheet_name='Sheet1')
