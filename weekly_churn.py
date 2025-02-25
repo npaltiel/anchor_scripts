@@ -10,6 +10,7 @@ visits_df = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Weekly Churn\\Visit_Report.csv")
 visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
+visits_df = visits_df[pd.notna(visits_df['VisitTime'])]
 
 split_df = visits_df['PatientName'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')

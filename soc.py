@@ -13,6 +13,7 @@ visits_df = pd.read_csv(
     low_memory=False)
 
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
+visits_df = visits_df[pd.notna(visits_df['VisitTime'])]
 
 # Patient Churn
 # Split patient name and admission id
@@ -68,7 +69,7 @@ soc_df.rename(columns={'VisitDate': 'FirstVisitDate'}, inplace=True)
 # Output Excel file path
 month = datetime.today().strftime('%b')
 year = datetime.today().strftime('%Y')
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}.xlsx'
+excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}Test.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 
