@@ -3,11 +3,11 @@ from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 visits_df = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Weekly Churn\\Visit_Report.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Weekly Churn\\Visit_Report.csv")
 visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
 visits_df = visits_df[pd.notna(visits_df['VisitTime'])]
@@ -46,7 +46,7 @@ missing_from_last_week = three_weeks_ago[~three_weeks_ago['UniqueID'].isin(recen
 week = start_of_2_weeks - pd.DateOffset(days=1)
 missing_from_last_week.insert(0, 'Week Ending', week.strftime("%m-%d-%Y"))
 
-file_path = "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Weekly Churn\\Weekly Churn Report.xlsx"
+file_path = "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Weekly Churn\\Weekly Churn Report.xlsx"
 sheet_name = "Data"
 
 with pd.ExcelWriter(file_path, mode='a', if_sheet_exists='overlay', engine='openpyxl') as writer:
