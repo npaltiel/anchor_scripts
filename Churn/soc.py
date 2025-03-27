@@ -39,7 +39,7 @@ visits_df['UniqueID'] = [
 visits_df['Branch_Updated'] = [
     'Baby' if pd.notna(visits_df['DOB'][i]) and
               datetime.strptime(visits_df['DOB'][i].strip(),
-                                "%m/%d/%Y %H:%M").date() >= date.today() - relativedelta(years=2)
+                                "%m/%d/%Y %H:%M:%S %p").date() >= date.today() - relativedelta(years=2)
     else visits_df['Branch'][i]
     for i in range(len(visits_df))
 ]
@@ -69,7 +69,7 @@ soc_df.rename(columns={'VisitDate': 'FirstVisitDate'}, inplace=True)
 # Output Excel file path
 month = datetime.today().strftime('%b')
 year = datetime.today().strftime('%Y')
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}Test.xlsx'
+excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 

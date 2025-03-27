@@ -2,6 +2,7 @@ import pandas as pd
 import sqlite3
 from datetime import date, datetime
 from dateutil.relativedelta import relativedelta
+from paradigm_churn import get_paradigm_churn
 
 df_patients = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
@@ -17,7 +18,7 @@ df_2 = pd.read_csv(
 df_3 = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
 df_4 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidJul_MidFeb.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
 df_lehigh = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
     dtype={'MedicaidNo': 'S10'})
@@ -200,7 +201,7 @@ for i in range(len(visits_df)):
     if visits_df['Branch'][i] == 'Code 95':
         branch.append('Code 95')
     elif pd.notna(visits_df['Date of Birth'][i]) and datetime.strptime(visits_df['Date of Birth'][i].strip(),
-                                                                       "%m/%d/%Y %H:%M").date() >= pd.Timestamp(
+                                                                       "%m/%d/%Y %H:%M:%S %p").date() >= pd.Timestamp(
         visits_df['VisitDate'][i]).date() - relativedelta(years=3):
         branch.append('Baby')
     else:
@@ -234,13 +235,17 @@ patients_df = patients_df[patients_df['ContractType'] != 'Unknown']
 patients_pa = patients_df[patients_df['ContractType'] == 'PA']
 patients_df = patients_df[~(patients_df['ContractType'] == 'PA')]
 
+paradigm_churn = get_paradigm_churn()
+
 # Write dataframes to database
-conn = sqlite3.connect("C:\\Users\\nochum.paltiel\\Documents\\PycharmProjects\\anchor_scripts\\churn.db")
+conn = sqlite3.connect(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
 
 # Create all tables
 patients_df.to_sql("patient_churn", conn, if_exists='replace', index=False)
 patients_pa.to_sql("patient_pa", conn, if_exists='replace', index=False)
 caregiver_df.to_sql("caregiver_churn", conn, if_exists='replace', index=False)
 caregiver_pa.to_sql("caregiver_pa", conn, if_exists='replace', index=False)
+paradigm_churn.to_sql("paradigm_churn", conn, if_exists='replace', index=False)
 
 conn.close()
