@@ -5,11 +5,11 @@ from openpyxl import load_workbook
 current = datetime.now() - timedelta(days=30)
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 prev_admissions = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Prev Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Prev Patients.csv")
 visits_df = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit_Report.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit_Report.csv")
 
 # Filter out missed visits and for NHTD
 visits_df = visits_df[(visits_df['ContractName'] == 'NHTD') | (visits_df['ContractName'] == 'TBI')]
@@ -46,7 +46,8 @@ for i in range(len(prev_admissions)):
 
 visits_df['Address'] = visits_df['Address Line 1'].fillna('').str.title() + ' ' + visits_df['Address Line 2'].fillna(
     '').str.title()
-visits_df['City, State'] = visits_df['City'].fillna('').str.title() + ', ' + visits_df['State'].fillna('').str.title()
+visits_df['City, State'] = visits_df['City'].fillna('').str.title() + ', ' + visits_df['State'].fillna(
+    '').str.title().str.replace(', Ny', ', NY')
 nhtd_df = visits_df[
     ['Last Name', 'First Name', 'Address', 'City, State', 'Zip', 'DOB', 'Gender',
      'AdmissionID', 'MedicaidNo']].copy()
@@ -59,11 +60,11 @@ nhtd_df['Visit Date'] = [
 nhtd_df['DOB'] = pd.to_datetime(nhtd_df['DOB'], errors='coerce').dt.strftime('%m/%d/%Y')
 
 anchor_active = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Anchor).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Anchor).xlsx")
 abode_active = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Abode).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Abode).xlsx")
 attentive_active = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Attentive).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Attentive).xlsx")
 
 anchor_active = anchor_active[
     ["Name", "SC Agency", "Start Date with SC", "Previous SC", "CIN", "Trans/Diversion", "HCSS Agency"]]
@@ -85,12 +86,12 @@ agencies_df['Current SC'] = [
     range(len(agencies_df))]
 
 discharged_anchor = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Anchor).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Anchor).xlsx")
 discharged_abode = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Abode).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Abode).xlsx")
 discharged_abode['SC Agency'] = 'Abode'
 discharged_attentive = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Attentive).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Attentive).xlsx")
 discharged_attentive['SC Agency'] = 'Attentive'
 
 nhtd_df['MedicaidNo'] = nhtd_df['MedicaidNo'].str.strip()
@@ -160,32 +161,34 @@ nhtd_df = pd.concat([nhtd_df, service_only], ignore_index=True)
 
 # Get Visit Rates
 rates = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit Rates.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit Rates.csv")
 nhtd_df = pd.merge(nhtd_df, rates, on='Visit Type', how='left')
 
 nhtd_df = nhtd_df.rename(columns={
     'Last Name': 'Last',
     'First Name': 'First',
     'DX Code': 'DX',
-    'MedicaidNo': 'CIN',
-    'AdmissionID': 'Admission ID'
+    'MedicaidNo': 'Medicaid ID',
+    'AdmissionID': 'Admission ID',
+    'Visit Type': 'Visit type'
 })
+nhtd_df['City, State'] = nhtd_df['City, State'].str.replace(', Ny', ', NY')
 
 # Ouput individual SC agencies billing sheets
 nhtd_df['Current SC'] = nhtd_df['Current SC'].str.strip()
-nhtd_df = nhtd_df.drop_duplicates(subset=['CIN']).reset_index(drop=True)
+nhtd_df = nhtd_df.drop_duplicates(subset=['Medicaid ID']).reset_index(drop=True)
 
 agencies = ['Anchor', 'Abode', 'Attentive', 'Able']
 for agency in agencies:
     df = nhtd_df[nhtd_df['Current SC'] == agency].drop(columns=['Current SC'])
-    file_path = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\SC Billing\\{agency} Billing.xlsx"
+    file_path = f"C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\SC Billing\\{agency} Billing.xlsx"
     # File exists: Load the workbook and write to a new sheet
     with pd.ExcelWriter(file_path, engine='openpyxl', mode='a') as writer:
         workbook = load_workbook(file_path)
         df.to_excel(writer, sheet_name=current.strftime("%B %Y"), index=False)
 
 # Output Excel file path
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\All Patients - {current.month} {current.year}.xlsx'
+excel_file = f'C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\All Patients - {current.month} {current.year}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 nhtd_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 

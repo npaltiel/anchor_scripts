@@ -5,11 +5,11 @@ from spire.xls import *
 from spire.xls.common import *
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 visits_df = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_7Month.csv",
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_7Month.csv",
     low_memory=False)
 
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
@@ -69,7 +69,7 @@ soc_df.rename(columns={'VisitDate': 'FirstVisitDate'}, inplace=True)
 # Output Excel file path
 month = datetime.today().strftime('%b')
 year = datetime.today().strftime('%Y')
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}.xlsx'
+excel_file = f'C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 

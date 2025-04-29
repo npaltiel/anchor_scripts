@@ -19,6 +19,10 @@ df_3 = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
 df_4 = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
+df_5 = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan25_MidApr.csv")
+df_6 = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Mar25.csv")
 df_lehigh = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
     dtype={'MedicaidNo': 'S10'})
@@ -26,7 +30,7 @@ df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
 
 df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
 
-visits_df = pd.concat([df_1, df_2, df_3, df_4, df_lehigh])
+visits_df = pd.concat([df_6, df_5, df_4, df_3, df_2, df_1, df_lehigh])
 visits_df = visits_df.drop_duplicates(subset=['VisitID']).copy()
 
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
@@ -103,7 +107,7 @@ hours['End Time'] = pd.to_datetime(hours['End Time'], format='%H%M')
 
 # Adjust for overnight cases where End Time is earlier than Start Time
 hours['End Time'] = hours.apply(
-    lambda row: row['End Time'] + pd.Timedelta(days=1) if row['End Time'] < row['Start Time'] else row['End Time'],
+    lambda row: row['End Time'] + pd.Timedelta(days=1) if row['End Time'] <= row['Start Time'] else row['End Time'],
     axis=1)
 
 # Calculate duration in minutes
@@ -210,7 +214,7 @@ visits_df['Branch_Updated'] = branch
 
 # Work with only columns I require
 patients_df = visits_df[
-    ['Month', 'Year', 'Branch_Updated', 'ContractType', 'UniqueID', 'AdmissionID', 'PatientName', 'Team',
+    ['Month', 'Year', 'Branch_Updated', 'ContractType', 'UniqueID', 'AdmissionID', 'PatientName', 'Team', 'CountyName',
      'Duration (Hours)',
      'Previous (Category)',
      'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
