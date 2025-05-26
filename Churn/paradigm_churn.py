@@ -5,11 +5,11 @@ from dateutil.relativedelta import relativedelta
 
 def get_paradigm_churn():
     df_1 = pd.read_excel(
-        "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Paradigm\\SuperbillReport_Jan_June.xlsx")
+        "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Paradigm\\SuperbillReport_Jan_June.xlsx")
     df_2 = pd.read_excel(
-        "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Paradigm\\SuperbillReport_July_December.xlsx")
+        "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Paradigm\\SuperbillReport_July_December.xlsx")
     df_3 = pd.read_excel(
-        "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Paradigm\\SuperbillReport_Jan25_Mar25.xlsx")
+        "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Paradigm\\SuperbillReport_Jan25_Mar25.xlsx")
 
     visits_df = pd.concat([df_1, df_2, df_3])
     visits_df = visits_df.drop_duplicates(subset=['Note Id']).reset_index(drop=True)

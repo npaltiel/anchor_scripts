@@ -7,23 +7,23 @@ import time
 
 # =============== SETTINGS ================
 MAX_RETRIES = 2  # How many times to retry failed sends
-PAUSE_BETWEEN_RETRIES = 5  # Seconds to wait between retry rounds
+PAUSE_BETWEEN_RETRIES = 10  # Seconds to wait between retry rounds
 
 # =============== LOAD DATA ================
 now = datetime.today()
-last_friday = now - timedelta(days=(now.weekday() - 4) % 7 + 7)
+last_friday = now - timedelta(days=(now.weekday() - 4) % 7)
 invoice_date = f"{last_friday.month}.{last_friday.day}.{last_friday.year % 100}"
 
 start_date = (last_friday - timedelta(days=6)).strftime("%m/%d/%Y")
 end_date = last_friday.strftime("%m/%d/%Y")
 
 emails_df = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\Invoice Wording Lookup.xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\Invoice Wording Lookup.xlsx")
 
 invoice_folder_path = Path(
-    f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\{invoice_date}")
+    f"C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\{invoice_date}")
 
-sent_already = set([])
+sent_already = {}
 
 # =============== PROCESS INVOICES ================
 success_log = []
@@ -72,47 +72,48 @@ for file in invoice_folder_path.iterdir():
             body = f"Hi {patient_name.split(' ')[-1]},\n\n{filtered_df['Email Body'][0]}"
             body = body.replace("XXX", start_date, 1).replace("XXX", end_date, 1)
 
-            first_email = addresses[0]
-            if first_email in sent_already:
-                print(f"Skipping {first_email} (already sent)")
+            if patient_name in sent_already:
+                print(f"Skipping {patient_name} (already sent)")
                 continue
 
             try:
                 response = send_mailgun_email(addresses, subject, body, attachments)
                 if response.status_code == 200:
-                    success_log.append({'addresses': addresses, 'subject': subject, 'status': 'Success'})
+                    success_log.append({'patient': patient_name, 'subject': subject, 'status': 'Success'})
                 else:
-                    retry_list.append((addresses, subject, body, attachments, response.text))
+                    retry_list.append((patient_name, addresses, subject, body, attachments, response.text))
             except Exception as e:
-                retry_list.append((addresses, subject, body, attachments, str(e)))
+                retry_list.append((patient_name, addresses, subject, body, attachments, str(e)))
 
 # =============== RETRY LOGIC ================
 for attempt in range(MAX_RETRIES):
+
     if not retry_list:
         break
+
+    time.sleep(PAUSE_BETWEEN_RETRIES)
 
     print(f"🔄 Retry round {attempt + 1} starting for {len(retry_list)} emails...")
     new_retry_list = []
 
-    for addresses, subject, body, attachments, previous_error in retry_list:
+    for patient_name, addresses, subject, body, attachments, previous_error in retry_list:
         try:
             response = send_mailgun_email(addresses, subject, body, attachments)
             if response.status_code == 200:
                 success_log.append(
-                    {'addresses': addresses, 'subject': subject, 'status': f'Retry Success {attempt + 1}'})
+                    {'patient': patient_name, 'subject': subject, 'status': f'Retry Success {attempt + 1}'})
             else:
-                new_retry_list.append((addresses, subject, body, attachments, response.text))
+                new_retry_list.append((patient_name, addresses, subject, body, attachments, response.text))
         except Exception as e:
-            new_retry_list.append((addresses, subject, body, attachments, str(e)))
+            new_retry_list.append((patient_name, addresses, subject, body, attachments, str(e)))
 
     retry_list = new_retry_list
     print(f"🔄 Retry round {attempt + 1} complete. Remaining: {len(retry_list)}")
-    time.sleep(PAUSE_BETWEEN_RETRIES)
 
 # Anything still left after retries goes to error log
-for addresses, subject, body, attachments, final_error in retry_list:
+for patient_name, addresses, subject, body, attachments, final_error in retry_list:
     error_log.append(
-        {'addresses': addresses, 'subject': subject, 'status': 'Failed after retries', 'error': final_error})
+        {'patient': patient_name, 'subject': subject, 'status': 'Failed after retries', 'error': final_error})
 
 # =============== REPORTING ================
 print(f"\n✅ Successfully sent {len(success_log)} emails.")
@@ -120,14 +121,14 @@ print(f"❌ Failed to send {len(error_log)} emails.")
 
 if error_log:
     for err in error_log:
-        print(f"Error sending to {err['addresses']}: {err['error']}")
+        print(f"Error sending to {err['patient']}: {err['error']}")
 
 if len(duplicates) + len(missing) > 0:
     missing_text = f"\n\nMissing names:\n{', '.join(missing)}" if missing else ''
     duplicates_text = f"\n\nDuplicate names:\n{', '.join(duplicates)}" if duplicates else ''
 
-    body_start = 'Hi Berry,'
+    body_start = 'Hi Ingrid,'
     body_end = '\n\nThanks,\nNochum'
 
     body = body_start + missing_text + duplicates_text + body_end
-    send_mailgun_email(['berry@anchorhc.org'], 'Missing/Duplicated Invoice Names', body)
+    send_mailgun_email(['ingrid.p@anchorhc.org'], 'Missing/Duplicated Invoice Names', body)

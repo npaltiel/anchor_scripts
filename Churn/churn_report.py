@@ -5,26 +5,26 @@ from dateutil.relativedelta import relativedelta
 from paradigm_churn import get_paradigm_churn
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_patients_lehigh = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
 df_patients_lehigh['Medicaid Number'] = df_patients_lehigh['Medicaid Number'].astype(str)
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 df_1 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
 df_2 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
 df_3 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
 df_4 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
 df_5 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan25_MidApr.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan25_MidApr.csv")
 df_6 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Mar25.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Feb25_MidMay.csv")
 df_lehigh = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
     dtype={'MedicaidNo': 'S10'})
 df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
 
@@ -204,12 +204,14 @@ branch = []
 for i in range(len(visits_df)):
     if visits_df['Branch'][i] == 'Code 95':
         branch.append('Code 95')
+    elif visits_df['Branch'][i] == 'ACD TRANSFER':
+        branch.append('ACD')
     elif pd.notna(visits_df['Date of Birth'][i]) and datetime.strptime(visits_df['Date of Birth'][i].strip(),
                                                                        "%m/%d/%Y %H:%M:%S %p").date() >= pd.Timestamp(
         visits_df['VisitDate'][i]).date() - relativedelta(years=3):
         branch.append('Baby')
     else:
-        branch.append("None")
+        branch.append(visits_df['Branch'][i])
 visits_df['Branch_Updated'] = branch
 
 # Work with only columns I require
@@ -243,7 +245,7 @@ paradigm_churn = get_paradigm_churn()
 
 # Write dataframes to database
 conn = sqlite3.connect(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
 
 # Create all tables
 patients_df.to_sql("patient_churn", conn, if_exists='replace', index=False)

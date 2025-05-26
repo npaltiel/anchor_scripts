@@ -1,17 +1,20 @@
 import pandas as pd
+from datetime import date
+
+td = date.today()
 
 anchor_active = pd.read_excel(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Anchor).xlsx",
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Anchor).xlsx",
     dtype=str, keep_default_na=False)
 abode_active = pd.read_excel(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Abode).xlsx",
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Abode).xlsx",
     dtype=str, keep_default_na=False)
 attentive_active = pd.read_excel(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Attentive).xlsx",
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Attentive).xlsx",
     dtype=str, keep_default_na=False)
 
 anchor_active = anchor_active.rename(columns={'Total Hours Utilization': 'Total Hours Utilized'})
-anchor_active = anchor_active.drop(['Date Added to Sensative', 'Sensitive', 'Sensitive Notes'], axis=1)
+anchor_active = anchor_active.drop(['Date Added to Sensative', 'Sensitive', 'Sensitive Notes', 'COI File'], axis=1)
 abode_active = abode_active.rename(columns={'Hours Utilized %': 'Hours Utilization %'})
 abode_active = abode_active.drop('Location', axis=1)
 attentive_active = attentive_active.rename(columns={'Addendum type': 'Addendum Type'})
@@ -146,7 +149,7 @@ for cin, value in discrepancies_attentive.items():
 # Create DataFrame
 attentive_discrepancies = pd.DataFrame(structured_rows_attentive)
 
-abode_path = "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Discrepancies\\abode.xlsx"
+abode_path = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Discrepancies\\abode_{td}.xlsx"
 abode_discrepancies.to_excel(abode_path, index=False, sheet_name='Sheet1')
-attentive_path = "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Discrepancies\\attentive.xlsx"
+attentive_path = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Discrepancies\\attentive_{td}.xlsx"
 attentive_discrepancies.to_excel(attentive_path, index=False, sheet_name='Sheet1')
