@@ -5,26 +5,28 @@ from dateutil.relativedelta import relativedelta
 from paradigm_churn import get_paradigm_churn
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_patients_lehigh = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
 df_patients_lehigh['Medicaid Number'] = df_patients_lehigh['Medicaid Number'].astype(str)
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+df_livein = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Live In Lookup.csv")
 df_1 = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
 df_2 = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
 df_3 = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
 df_4 = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
 df_5 = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan25_MidApr.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidNov_MidJune.csv")
 df_6 = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Feb25_MidMay.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidFeb25_MidSep.csv")
 df_lehigh = pd.read_csv(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
     dtype={'MedicaidNo': 'S10'})
 df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
 
@@ -111,7 +113,15 @@ hours['End Time'] = hours.apply(
     axis=1)
 
 # Calculate duration in minutes
+# Compute Duration (Hours)
 hours['Duration (Hours)'] = (hours['End Time'] - hours['Start Time']).dt.total_seconds() / 3600
+
+livein_pairs = set(zip(df_livein['Contract'], df_livein['Service Code']))
+
+# Apply the rule: if the contract-service pair is in livein list and Duration > 13, cap at 13
+mask = hours.apply(
+    lambda row: (row['ContractName'], row['ServiceCode_1']) in livein_pairs and row['Duration (Hours)'] > 13, axis=1)
+hours.loc[mask, 'Duration (Hours)'] = 13
 
 # Group hours by admission id and month
 grouped_hours = hours.groupby(
@@ -241,17 +251,17 @@ patients_df = patients_df[patients_df['ContractType'] != 'Unknown']
 patients_pa = patients_df[patients_df['ContractType'] == 'PA']
 patients_df = patients_df[~(patients_df['ContractType'] == 'PA')]
 
-paradigm_churn = get_paradigm_churn()
+# paradigm_churn = get_paradigm_churn()
 
 # Write dataframes to database
 conn = sqlite3.connect(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
 
 # Create all tables
 patients_df.to_sql("patient_churn", conn, if_exists='replace', index=False)
 patients_pa.to_sql("patient_pa", conn, if_exists='replace', index=False)
 caregiver_df.to_sql("caregiver_churn", conn, if_exists='replace', index=False)
 caregiver_pa.to_sql("caregiver_pa", conn, if_exists='replace', index=False)
-paradigm_churn.to_sql("paradigm_churn", conn, if_exists='replace', index=False)
+# paradigm_churn.to_sql("paradigm_churn", conn, if_exists='replace', index=False)
 
 conn.close()

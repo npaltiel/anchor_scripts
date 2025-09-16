@@ -3,13 +3,14 @@ from datetime import date, datetime, timedelta
 from openpyxl import load_workbook
 
 current = datetime.now() - timedelta(days=30)
+start_of_month = current.replace(day=1, hour=0, minute=0, second=0, microsecond=0)
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 prev_admissions = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Prev Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Prev Patients.csv")
 visits_df = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit_Report.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\August Report\\Visit_Report.csv")
 
 # Filter out missed visits and for NHTD
 visits_df = visits_df[(visits_df['ContractName'] == 'NHTD') | (visits_df['ContractName'] == 'TBI')]
@@ -61,11 +62,11 @@ nhtd_df['Visit Date'] = [
 nhtd_df['DOB'] = pd.to_datetime(nhtd_df['DOB'], errors='coerce').dt.strftime('%m/%d/%Y')
 
 anchor_active = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Anchor).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\August Report\\Active (Anchor).xlsx")
 abode_active = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Abode).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\August Report\\Active (Abode).xlsx")
 attentive_active = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Active (Attentive).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\August Report\\Active (Attentive).xlsx")
 
 anchor_active = anchor_active[
     ["Name", "SC Agency", "Start Date with SC", "Previous SC", "CIN", "Trans/Diversion", "HCSS Agency"]]
@@ -81,25 +82,31 @@ agencies_df['Start Date with SC'] = pd.to_datetime(agencies_df['Start Date with 
 
 last_month_28th = (datetime.today().replace(day=1) - timedelta(days=1)).replace(day=28)
 agencies_df['Current SC'] = [
-    agencies_df["SC Agency"][i].strip() if pd.isna(agencies_df['Start Date with SC'][i]) or
-                                           agencies_df['Start Date with SC'][i] <= last_month_28th else
-    agencies_df["Previous SC"][i].strip() for i in
-    range(len(agencies_df))]
+    str(agencies_df["SC Agency"][i]).strip() if pd.isna(agencies_df['Start Date with SC'][i]) or
+                                                agencies_df['Start Date with SC'][i] <= last_month_28th else
+    str(agencies_df["Previous SC"][i]).strip()
+    for i in range(len(agencies_df))
+]
 
 discharged_anchor = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Anchor).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\August Report\\Discharged (Anchor).xlsx")
 discharged_abode = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Abode).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\August Report\\Discharged (Abode).xlsx")
 discharged_abode['SC Agency'] = 'Abode'
 discharged_attentive = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Discharged (Attentive).xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\August Report\\Discharged (Attentive).xlsx")
 discharged_attentive['SC Agency'] = 'Attentive'
 
 nhtd_df['MedicaidNo'] = nhtd_df['MedicaidNo'].str.strip()
 agencies_df['CIN'] = agencies_df['CIN'].str.strip()
+
 discharged_anchor['CIN'] = discharged_anchor['CIN'].str.strip()
+discharged_anchor = discharged_anchor[discharged_anchor['Discharge Date'] > start_of_month]
 discharged_abode['CIN'] = discharged_abode['CIN'].str.strip()
+discharged_abode = discharged_abode[discharged_abode['Discharge Date'] > start_of_month]
 discharged_attentive['CIN'] = discharged_attentive['CIN'].str.strip()
+discharged_attentive = discharged_attentive[discharged_attentive['Discharge Date'] > start_of_month]
+
 nhtd_df = nhtd_df.merge(agencies_df[['CIN', 'Current SC', 'Trans/Diversion']], left_on='MedicaidNo', right_on='CIN',
                         how='left')
 nhtd_df = nhtd_df.merge(discharged_anchor[['CIN', 'SC Agency']], left_on='MedicaidNo', right_on='CIN',
@@ -112,6 +119,17 @@ nhtd_df['Visit Type'] = ["SC monthly visit" if nhtd_df['MedicaidNo'][i] in prev_
                          for i in
                          range(len(nhtd_df))]
 
+# Create duplicate rows for new patients with a second visit entry (SC monthly visit)
+new_patient_mask = ~nhtd_df['MedicaidNo'].isin(prev_ids)
+second_visit_rows = nhtd_df[new_patient_mask].copy()
+
+# Modify for the second row:
+second_visit_rows['Visit Date'] = f'{current.month}/3/{current.year}'
+second_visit_rows['Visit Type'] = 'SC monthly visit'  # Ensure naming matches final output format
+
+# Append the second visit rows to the main billing dataframe
+nhtd_df = pd.concat([nhtd_df, second_visit_rows], ignore_index=True)
+
 for i in range(len(nhtd_df)):
     prev_ids.append(nhtd_df['MedicaidNo'][i])
     prev_first_visit.append(nhtd_df['Visit Date'][i])
@@ -119,7 +137,7 @@ for i in range(len(nhtd_df)):
 start_of_month = datetime(datetime.today().year, datetime.today().month, 1)
 service_only = agencies_df[(~agencies_df['CIN'].isin(nhtd_df['MedicaidNo'])) &
                            (agencies_df['Start Date with SC'] < start_of_month) &
-                           (~agencies_df['HCSS Agency'].str.contains('Anchor', case=False, na=False))]
+                           (~agencies_df['HCSS Agency'].str.contains('Anchor', case=False, na=False))].copy()
 
 df_patients_agg = df_patients_agg.groupby('Medicaid Number', as_index=False).agg(aggregation_functions)
 service_only = pd.merge(service_only, df_patients_agg, left_on='CIN', right_on='Medicaid Number', how='left')
@@ -136,17 +154,40 @@ service_only['MedicaidNo'] = (
     service_only['CIN']
     .fillna(service_only['MedicaidNo'])
 )
-service_only['Visit Type'] = 'Service Only'
+service_only['Visit Type'] = 'SC monthly visit'
 service_only['DX Code'] = 'F03.90'
-service_only = service_only[
-    ['Current SC', 'Last Name', 'First Name', 'Address', 'City, State', 'Zip', 'DOB', 'DX Code',
-     'Gender',
-     'AdmissionID', 'MedicaidNo', 'Visit Type']]
 service_only['Gender'] = [
     gender[0] if pd.notna(gender) else gender
     for gender in service_only['Gender']
 ]
 service_only['Visit Date'] = f'{current.month}/1/{current.year}'
+
+# Duplicate rows for new Service Only patients
+prev_month_start = (start_of_month - timedelta(days=1)).replace(day=1)
+
+new_service_patients = service_only[
+    (service_only['Start Date with SC'] >= prev_month_start)
+].copy()
+
+service_only = service_only[~service_only['MedicaidNo'].isin(new_service_patients['MedicaidNo'])]
+
+# Create duplicated rows
+trans_rows = new_service_patients.copy()
+trans_rows['Visit Date'] = f'{current.month}/3/{current.year}'
+trans_rows['Visit Type'] = trans_rows['Trans/Diversion']
+
+monthly_rows = new_service_patients.copy()
+monthly_rows['Visit Date'] = f'{current.month}/3/{current.year}'
+monthly_rows['Visit Type'] = 'SC monthly visit'
+
+# Recombine
+service_only = pd.concat([service_only, trans_rows, monthly_rows], ignore_index=True)
+
+# Final formatting
+service_only = service_only[
+    ['Current SC', 'Last Name', 'First Name', 'Address', 'City, State', 'Zip', 'DOB', 'DX Code',
+     'Gender', 'AdmissionID', 'MedicaidNo', 'Visit Type', 'Visit Date']
+]
 
 nhtd_df['Current SC'] = (
     nhtd_df['Current SC']
@@ -162,7 +203,7 @@ nhtd_df = pd.concat([nhtd_df, service_only], ignore_index=True)
 
 # Get Visit Rates
 rates = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit Rates.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Visit Rates.csv")
 nhtd_df = pd.merge(nhtd_df, rates, on='Visit Type', how='left')
 
 nhtd_df = nhtd_df.rename(columns={
@@ -177,25 +218,26 @@ nhtd_df['City, State'] = nhtd_df['City, State'].str.replace(', Ny', ', NY')
 
 # Ouput individual SC agencies billing sheets
 nhtd_df['Current SC'] = nhtd_df['Current SC'].str.strip()
-nhtd_df = nhtd_df.drop_duplicates(subset=['Medicaid ID']).reset_index(drop=True)
+nhtd_df = nhtd_df.sort_values(by=['Last', 'First', 'Medicaid ID', 'Visit type'])
+nhtd_df = nhtd_df.drop_duplicates(subset=['Medicaid ID', 'Visit type']).reset_index(drop=True)
 
 agencies = ['Anchor', 'Abode', 'Attentive', 'Able']
-for agency in agencies:
-    df = nhtd_df[nhtd_df['Current SC'] == agency].drop(columns=['Current SC'])
-    file_path = f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\SC Billing\\{agency} Billing.xlsx"
-    # File exists: Load the workbook and write to a new sheet
-    with pd.ExcelWriter(file_path, engine='openpyxl', mode='a') as writer:
-        workbook = load_workbook(file_path)
-        df.to_excel(writer, sheet_name=current.strftime("%B %Y"), index=False)
+# for agency in agencies:
+#     df = nhtd_df[nhtd_df['Current SC'] == agency].drop(columns=['Current SC'])
+#     file_path = f"C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\SC Billing\\{agency} Billing.xlsx"
+#     # File exists: Load the workbook and write to a new sheet
+#     with pd.ExcelWriter(file_path, engine='openpyxl', mode='a') as writer:
+#         workbook = load_workbook(file_path)
+#         df.to_excel(writer, sheet_name=current.strftime("%B %Y"), index=False)
 
-# Output Excel file path
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\All Patients - {current.month} {current.year}.xlsx'
+# # Output Excel file path
+excel_file = f'C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\All Patients - {current.month} {current.year}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
-nhtd_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
+# nhtd_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 
 prev_ids_df = pd.DataFrame(prev_ids, columns=['MedicaidNo'])
 prev_ids_df['FirstVisit'] = prev_first_visit
 prev_ids_df = prev_ids_df.drop_duplicates(subset=['MedicaidNo']).reset_index(drop=True)
-prev_ids_df.to_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Prev Patients.csv",
-    index=False)
+# prev_ids_df.to_csv(
+#     "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\NHTD\\Billing Report\\Prev Patients.csv",
+#     index=False)

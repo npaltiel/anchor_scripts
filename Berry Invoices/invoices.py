@@ -1,9 +1,9 @@
 import pandas as pd
-from datetime import datetime, timedelta, date
 from pathlib import Path
 from emails_mailgun import send_mailgun_email
 from find_files import find_care_notes, find_invoices
 import time
+from datetime import datetime, timedelta, date
 
 # =============== SETTINGS ================
 MAX_RETRIES = 2  # How many times to retry failed sends
@@ -11,17 +11,17 @@ PAUSE_BETWEEN_RETRIES = 10  # Seconds to wait between retry rounds
 
 # =============== LOAD DATA ================
 now = datetime.today()
-last_friday = now - timedelta(days=(now.weekday() - 4) % 7)
+last_friday = now - timedelta(days=(now.weekday() - 4) % 7 + 7)
 invoice_date = f"{last_friday.month}.{last_friday.day}.{last_friday.year % 100}"
 
 start_date = (last_friday - timedelta(days=6)).strftime("%m/%d/%Y")
 end_date = last_friday.strftime("%m/%d/%Y")
 
 emails_df = pd.read_excel(
-    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\Invoice Wording Lookup.xlsx")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\Invoice Wording Lookup.xlsx")
 
 invoice_folder_path = Path(
-    f"C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\{invoice_date}")
+    f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\{invoice_date}")
 
 sent_already = {}
 
@@ -53,9 +53,12 @@ for file in invoice_folder_path.iterdir():
             attachments = [file]
             # Check if Care Note
             care_note = find_care_notes(invoice_folder_path, invoice_date, patient_name)
+            care_note2 = find_care_notes(invoice_folder_path, invoice_date, patient_name, True)
+            invoice2 = find_invoices(invoice_folder_path, invoice_date, patient_name)
             if care_note:
                 attachments.append(care_note)
-            invoice2 = find_invoices(invoice_folder_path, invoice_date, patient_name)
+            if care_note2:
+                attachments.append(care_note2)
             if invoice2:
                 attachments.append(invoice2)
 
@@ -128,7 +131,7 @@ if len(duplicates) + len(missing) > 0:
     duplicates_text = f"\n\nDuplicate names:\n{', '.join(duplicates)}" if duplicates else ''
 
     body_start = 'Hi Ingrid,'
-    body_end = '\n\nThanks,\nNochum'
+    body_end = '\n\nThanks,\nnochum.paltielm'
 
     body = body_start + missing_text + duplicates_text + body_end
     send_mailgun_email(['ingrid.p@anchorhc.org'], 'Missing/Duplicated Invoice Names', body)

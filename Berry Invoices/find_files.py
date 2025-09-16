@@ -1,9 +1,12 @@
 from pathlib import Path
 
 
-def find_care_notes(folder_path, date, patient_name):
+def find_care_notes(folder_path, date, patient_name, second=False):
     # Construct expected file name
-    expected_file_name = f"Care Notes - {date} - {patient_name}.pdf"
+    if second:
+        expected_file_name = f"Care Notes - {date} - {patient_name}2.pdf"
+    else:
+        expected_file_name = f"Care Notes - {date} - {patient_name}.pdf"
 
     # Check if the file exists in the folder
     file_path = Path(folder_path) / expected_file_name

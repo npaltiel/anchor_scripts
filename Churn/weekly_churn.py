@@ -5,7 +5,7 @@ from dateutil.relativedelta import relativedelta
 df_patients = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_caregivers = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Caregivers.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Caregivers (Quality).csv")
 df_contracts = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 visits_df = pd.read_csv(
@@ -17,7 +17,10 @@ visits_df = visits_df[pd.notna(visits_df['VisitTime'])]
 today = date.today()
 start_of_2_weeks = today - pd.DateOffset(days=today.weekday() + 16 - (7 if today.weekday() == 5 else 0))
 start_of_3_weeks_ago = start_of_2_weeks - pd.DateOffset(days=7)
-week = start_of_2_weeks - pd.DateOffset(days=1)
+start_of_4_weeks_ago = start_of_3_weeks_ago - pd.DateOffset(days=7)
+start_of_5_weeks_ago = start_of_4_weeks_ago - pd.DateOffset(days=7)
+patient_week = start_of_2_weeks - pd.DateOffset(days=1)
+caregiver_week = start_of_4_weeks_ago - pd.DateOffset(days=1)
 
 # Caregiver Churn
 caregiver_df = visits_df.copy()
@@ -29,18 +32,20 @@ caregiver_df[['CaregiverName', 'CaregiverCode']] = split_df[[0, 1]]
 caregiver_df = pd.merge(caregiver_df, df_caregivers, left_on='CaregiverCode', right_on='Caregiver Code - Office',
                         how='left')
 
-caregivers_recent = caregiver_df[caregiver_df['VisitDate'] >= start_of_2_weeks]
-caregivers_three_weeks_ago = caregiver_df[
-    (caregiver_df['VisitDate'] >= start_of_3_weeks_ago) & (caregiver_df['VisitDate'] < start_of_2_weeks)]
+# caregivers_recent = caregiver_df[caregiver_df['VisitDate'] >= start_of_3_weeks_ago]
+caregivers_recent = caregiver_df[
+    (caregiver_df['VisitDate'] >= start_of_4_weeks_ago)]
+caregivers_five_weeks_ago = caregiver_df[
+    (caregiver_df['VisitDate'] >= start_of_5_weeks_ago) & (caregiver_df['VisitDate'] < start_of_4_weeks_ago)]
 
 caregivers_recent = caregivers_recent.drop_duplicates(subset=['CaregiverCode']).reset_index(drop=True)
-caregivers_three_weeks_ago = caregivers_three_weeks_ago.drop_duplicates(subset=['CaregiverCode']).reset_index(drop=True)
+caregivers_five_weeks_ago = caregivers_five_weeks_ago.drop_duplicates(subset=['CaregiverCode']).reset_index(drop=True)
 
 caregivers_missing = \
-    caregivers_three_weeks_ago[~caregivers_three_weeks_ago['CaregiverCode'].isin(caregivers_recent['CaregiverCode'])][[
+    caregivers_five_weeks_ago[~caregivers_five_weeks_ago['CaregiverCode'].isin(caregivers_recent['CaregiverCode'])][[
         'Status', 'CaregiverCode', 'Primary Office']]
 
-caregivers_missing.insert(0, 'Week Ending', week.strftime("%m-%d-%Y"))
+caregivers_missing.insert(0, 'Week Ending', caregiver_week.strftime("%m-%d-%Y"))
 
 # Patient Churn
 split_df = visits_df['PatientName'].str.split('(', expand=True)
@@ -70,7 +75,7 @@ three_weeks_ago = three_weeks_ago.drop_duplicates(subset=['UniqueID']).reset_ind
 patients_missing = three_weeks_ago[~three_weeks_ago['UniqueID'].isin(recent['UniqueID'])][[
     'Status', 'AdmissionID', 'ContractType']]
 
-patients_missing.insert(0, 'Week Ending', week.strftime("%m-%d-%Y"))
+patients_missing.insert(0, 'Week Ending', patient_week.strftime("%m-%d-%Y"))
 
 file_path = "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Weekly Churn\\Weekly Churn Report.xlsx"
 caregiver_sheet_name = "Caregiver Data"
