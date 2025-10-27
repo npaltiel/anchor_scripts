@@ -5,11 +5,11 @@ from spire.xls import *
 from spire.xls.common import *
 
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 visits_df = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_7Month.csv",
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\Visit_Report_7Month.csv",
     low_memory=False)
 
 visits_df = visits_df[visits_df['MissedVisit'] == 'No']
@@ -44,7 +44,10 @@ visits_df['Branch_Updated'] = [
     for i in range(len(visits_df))
 ]
 
-today = datetime.now() - pd.DateOffset(months=1)
+# Remove TEMP auths
+visits_df = visits_df[visits_df['Patient ID'].str.lower() != "temp"]
+
+today = datetime.now()
 sixteenth_of_previous_month = (today.replace(day=1) - pd.DateOffset(months=1)).replace(day=16).date()
 
 visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
@@ -56,9 +59,24 @@ cur_df = visits_df[visits_df['VisitDate'] >= pd.Timestamp(sixteenth_of_previous_
 prev_df = prev_df.sort_values(by=['VisitDate'], ascending=False)
 prev_df = prev_df.drop_duplicates(subset=['UniqueID']).reset_index(drop=True)
 
-# --- Current period: also keep the most recent visit per UniqueID ---
-cur_df = cur_df.sort_values(by=['VisitDate'], ascending=False)
-cur_df = cur_df.drop_duplicates(subset=['UniqueID']).reset_index(drop=True)
+# Step 1: Earliest visit per UniqueID
+earliest_visits = (
+    cur_df
+    .sort_values(by='VisitDate', ascending=True)
+    .drop_duplicates(subset='UniqueID')[['UniqueID', 'VisitDate']]
+    .rename(columns={'VisitDate': 'EarliestVisitDate'})
+)
+
+# Step 2: Latest visit per UniqueID (main cur_df to keep)
+cur_df = (
+    cur_df
+    .sort_values(by='VisitDate', ascending=False)
+    .drop_duplicates(subset='UniqueID')
+    .reset_index(drop=True)
+)
+
+# Step 3: Merge in earliest visit info
+cur_df = cur_df.merge(earliest_visits, on='UniqueID', how='left')
 
 prev_ids = []
 for i in range(len(prev_df)):
@@ -92,17 +110,17 @@ cur_df.loc[transfer_mask, 'Branch_Updated'] = 'Transferred to NHTD'
 
 # Now build soc_df from the filtered current rows
 soc_df = cur_df.loc[final_mask, [
-    'AdmissionID', 'First Name', 'Last Name', 'VisitDate', 'Branch_Updated',
+    'AdmissionID', 'First Name', 'Last Name', 'EarliestVisitDate', 'Branch_Updated',
     'ContractName', 'ContractType', 'Team', 'DOB', 'Status'
 ]].copy()
 
 # Clean up and rename
-soc_df.rename(columns={'VisitDate': 'FirstVisitDate'}, inplace=True)
+soc_df.rename(columns={'EarliestVisitDate': 'FirstVisitDate'}, inplace=True)
 
 # Output Excel file path
 month = datetime.today().strftime('%b')
 year = datetime.today().strftime('%Y')
-excel_file = f'C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}CHHA.xlsx'
+excel_file = f'C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\SOC\\soc_{month}_{year}.xlsx'
 # Name, Branch, Contract Type, Contract, Team, DOB, Admission ID, Status
 soc_df.to_excel(excel_file, index=False, sheet_name='Sheet1')
 

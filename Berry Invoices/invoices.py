@@ -131,7 +131,7 @@ if len(duplicates) + len(missing) > 0:
     duplicates_text = f"\n\nDuplicate names:\n{', '.join(duplicates)}" if duplicates else ''
 
     body_start = 'Hi Ingrid,'
-    body_end = '\n\nThanks,\nnochum.paltielm'
+    body_end = '\n\nThanks,\nNochum'
 
     body = body_start + missing_text + duplicates_text + body_end
     send_mailgun_email(['ingrid.p@anchorhc.org'], 'Missing/Duplicated Invoice Names', body)

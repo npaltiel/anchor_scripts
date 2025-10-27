@@ -1,69 +1,81 @@
+# Enhanced Churn Report Script with Updated Grouping Logic
+
 import pandas as pd
 import sqlite3
-from datetime import date, datetime
+from datetime import datetime
 from dateutil.relativedelta import relativedelta
-from paradigm_churn import get_paradigm_churn
 
+# -----------------------------
+# Load Data
+# -----------------------------
+df_caregivers = pd.read_csv(
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Caregivers (Churn).csv")
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
 df_patients_lehigh = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
 df_patients_lehigh['Medicaid Number'] = df_patients_lehigh['Medicaid Number'].astype(str)
 df_contracts = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 df_livein = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Live In Lookup.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Live In Lookup.csv")
 df_1 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
 df_2 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
 df_3 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
 df_4 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
 df_5 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidNov_MidJune.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidNov_MidJune.csv")
 df_6 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidFeb25_MidSep.csv")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidMar25_MidOct.csv")
 df_lehigh = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
     dtype={'MedicaidNo': 'S10'})
 df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
-
 df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
 
+# -----------------------------
+# Visit Preparation
+# -----------------------------
 visits_df = pd.concat([df_6, df_5, df_4, df_3, df_2, df_1, df_lehigh])
-visits_df = visits_df.drop_duplicates(subset=['VisitID']).copy()
+visits_df = visits_df.drop_duplicates(subset=['VisitID'])
+visits_df = visits_df[(visits_df['MissedVisit'] == 'No') & (visits_df['Billed'] == 'Yes')].copy()
 
-visits_df = visits_df[visits_df['MissedVisit'] == 'No']
-visits_df = visits_df[visits_df['Billed'] == 'Yes']
-visits_df['Year'] = pd.DatetimeIndex(visits_df['VisitDate']).year
-visits_df['Month'] = pd.DatetimeIndex(visits_df['VisitDate']).month
+visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
+visits_df['Year'] = visits_df['VisitDate'].dt.year
+visits_df['Month'] = visits_df['VisitDate'].dt.month
 
+# -----------------------------
 # Caregiver Churn
+# -----------------------------
 caregiver_df = visits_df[['CaregiverName_Code', 'Month', 'Year']].copy()
-
-# Split Caregiver Name and Code
-split_df = visits_df['CaregiverName_Code'].str.split('(', expand=True)
+split_df = caregiver_df['CaregiverName_Code'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')
 caregiver_df[['CaregiverName', 'CaregiverCode']] = split_df[[0, 1]]
-# Get rid of CDPAP
 caregiver_df = caregiver_df[~caregiver_df['CaregiverCode'].str.contains('CDP', case=False, na=False)]
-
-# Drop Duplicates within each month
 caregiver_df = caregiver_df.drop_duplicates(subset=['CaregiverCode', 'Month', 'Year']).reset_index(drop=True)
 
-# Create a column for the previous month and year
+# Get Branch
+caregiver_df = caregiver_df.merge(
+    df_caregivers[['Caregiver Code - Office', 'Branch']],
+    left_on='CaregiverCode',
+    right_on='Caregiver Code - Office',
+    how='left'
+)
+caregiver_df.drop(columns=['Caregiver Code - Office'], inplace=True)
+
+# Previous month
 caregiver_df['PreviousMonth'] = caregiver_df['Month'] - 1
 caregiver_df['PreviousYear'] = caregiver_df['Year']
 caregiver_df.loc[caregiver_df['Month'] == 1, 'PreviousMonth'] = 12
 caregiver_df.loc[caregiver_df['Month'] == 1, 'PreviousYear'] -= 1
 
-# Create a shifted DataFrame for comparison
 shifted_df = caregiver_df[['CaregiverCode', 'Year', 'Month']].copy()
 shifted_df['Exists'] = 1
 
-# Merge the original DataFrame with the shifted DataFrame
 merged_df = caregiver_df.merge(
     shifted_df,
     left_on=['CaregiverCode', 'PreviousYear', 'PreviousMonth'],
@@ -71,103 +83,92 @@ merged_df = caregiver_df.merge(
     how='left',
     suffixes=('', '_y')
 )
-
-# Add a new column to indicate whether the previous entry exists
-caregiver_df['Continued'] = merged_df['Exists']
-caregiver_df['Continued'] = caregiver_df['Continued'].fillna(0).astype(int)
-
-# Sort the DataFrame by 'CaregiverCode', 'Year', and 'Month'
+caregiver_df['Continued'] = merged_df['Exists'].fillna(0).astype(int)
 caregiver_df = caregiver_df.sort_values(by=['CaregiverCode', 'Year', 'Month'])
-
-# Group by 'Unique ID' and 'Contract Type' and calculate cumulative count of earlier records
 caregiver_df['Earlier'] = caregiver_df.groupby(['CaregiverCode']).cumcount() > 0
-caregiver_df = caregiver_df.reset_index(drop=True)
-caregiver_df['Retained'] = [1 if caregiver_df['Continued'][i] != 1 and caregiver_df['Earlier'][i] == True else 0 for i
-                            in range(len(caregiver_df))]
-caregiver_df['New'] = [1 if caregiver_df['Earlier'][i] != True else 0 for i in range(len(caregiver_df))]
-
-caregiver_pa = caregiver_df[caregiver_df['CaregiverCode'].str.contains('OHZ', case=False, na=False)]
-caregiver_df = caregiver_df[~caregiver_df['CaregiverCode'].str.contains('OHZ', case=False, na=False)]
+caregiver_df['Retained'] = ((caregiver_df['Continued'] != 1) & caregiver_df['Earlier']).astype(int)
+caregiver_df['New'] = (~caregiver_df['Earlier']).astype(int)
 
 caregiver_df.drop(columns=['CaregiverName_Code', 'Earlier', 'PreviousMonth', 'PreviousYear'], inplace=True)
-caregiver_pa.drop(columns=['CaregiverName_Code', 'Earlier', 'PreviousMonth', 'PreviousYear'], inplace=True)
 
+# -----------------------------
 # Patient Churn
+# -----------------------------
 # Split patient name and admission id
 split_df = visits_df['PatientName'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')
 visits_df[['PatientName', 'AdmissionID']] = split_df[[0, 1]]
 
-# Get Patient hours
+# Compute duration in hours
 hours = visits_df.copy()
-# Split the ScheduleTime column into Start Time and End Time
 hours[['Start Time', 'End Time']] = hours['ScheduleTime'].str.split('-', expand=True)
-
-# Convert to datetime format
-hours['Start Time'] = pd.to_datetime(hours['Start Time'], format='%H%M')
-hours['End Time'] = pd.to_datetime(hours['End Time'], format='%H%M')
-
-# Adjust for overnight cases where End Time is earlier than Start Time
+hours['Start Time'] = pd.to_datetime(hours['Start Time'], format='%H%M', errors='coerce')
+hours['End Time'] = pd.to_datetime(hours['End Time'], format='%H%M', errors='coerce')
 hours['End Time'] = hours.apply(
     lambda row: row['End Time'] + pd.Timedelta(days=1) if row['End Time'] <= row['Start Time'] else row['End Time'],
     axis=1)
-
-# Calculate duration in minutes
-# Compute Duration (Hours)
 hours['Duration (Hours)'] = (hours['End Time'] - hours['Start Time']).dt.total_seconds() / 3600
 
 livein_pairs = set(zip(df_livein['Contract'], df_livein['Service Code']))
+hours.loc[hours.apply(
+    lambda row: (row['ContractName'], row['ServiceCode_1']) in livein_pairs and row['Duration (Hours)'] > 13,
+    axis=1), 'Duration (Hours)'] = 13
+grouped_hours = hours.groupby(['AdmissionID', 'Month', 'Year'], as_index=False).agg({'Duration (Hours)': 'sum'})
 
-# Apply the rule: if the contract-service pair is in livein list and Duration > 13, cap at 13
-mask = hours.apply(
-    lambda row: (row['ContractName'], row['ServiceCode_1']) in livein_pairs and row['Duration (Hours)'] > 13, axis=1)
-hours.loc[mask, 'Duration (Hours)'] = 13
+# Flag whether the visit is non-billable
+visits_df['NonBillable'] = (visits_df['ContractName'] == 'Non Billable')
 
-# Group hours by admission id and month
-grouped_hours = hours.groupby(
-    ['AdmissionID', 'Month', 'Year'], as_index=False
-).agg({'Duration (Hours)': 'sum'})
+# Count visits per AdmissionID, Month, Year
+visit_counts = visits_df.groupby(['AdmissionID', 'Month', 'Year'])['ContractName'].transform('count')
 
-# Remove visit duplicates within each month
+# Count how many are non-billable
+nonbillable_counts = visits_df.groupby(['AdmissionID', 'Month', 'Year'])['NonBillable'].transform('sum')
+
+# Keep only:
+# - Non-billable rows if they're the only row for that AdmissionID/Month/Year
+# - Or keep all other (billable) rows
+visits_df = visits_df[
+    ~((visits_df['ContractName'] == 'Non Billable') & (visit_counts > 1))
+]
+
+# Now drop duplicates (if more than one billable row remains)
 visits_df = visits_df.drop_duplicates(subset=['AdmissionID', 'Month', 'Year'])
 
-# Get Hours back in
 visits_df = pd.merge(visits_df, grouped_hours, on=['AdmissionID', 'Month', 'Year'], how='left')
 
-# Lookup contracts and patient information from relevant sources
+# Merge patient data and contracts
 visits_df = pd.merge(visits_df, df_contracts, on='ContractName', how='left')
 visits_df['ContractType'] = visits_df['ContractType'].fillna('Unknown')
 visits_df = pd.merge(visits_df, df_patients, left_on='AdmissionID', right_on='Admission ID - Office', how='left')
 visits_df = pd.merge(visits_df, df_patients_lehigh, left_on='MedicaidNo', right_on='Medicaid Number', how='left',
                      suffixes=('', '_lehigh'))
-visits_df['Date of Birth'] = visits_df['DOB'].combine_first(visits_df['Date of Birth'])
+visits_df['Date of Birth'] = pd.to_datetime(visits_df['DOB'].combine_first(visits_df['Date of Birth']), errors='coerce')
 
-visits_df['MedicaidNo'] = visits_df['MedicaidNo'].str.replace(r'\.0$', '', regex=True)
-visits_df['MedicaidNo'] = visits_df['MedicaidNo'].str.lstrip('0')
+# Age calculation
+visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
+visits_df['Age'] = (visits_df['VisitDate'] - visits_df['Date of Birth']).dt.days / 365.25
 
-# Create unique ID
+# Medicaid cleaning
+visits_df['MedicaidNo'] = visits_df['MedicaidNo'].replace(r'\.0$', '', regex=True).str.lstrip('0')
+
+# Unique ID
 visits_df['UniqueID'] = [
     visits_df['MedicaidNo'][i] if pd.notna(visits_df['MedicaidNo'][i]) and visits_df['MedicaidNo'][i] != 0 and
-                                  visits_df['ContractType'][i] not in ['CHHA', 'Private Pay'] else
-    visits_df['PatientName'][
-        i] + str(
-        visits_df['Date of Birth'][i]) for i in range(len(visits_df))]
+                                  visits_df['ContractType'][i] not in ['CHHA', 'Private Pay']
+    else visits_df['PatientName'][i] + str(visits_df['Date of Birth'][i]) for i in range(len(visits_df))
+]
 
-# Again drop duplicates based on Unique ID, Category and the Month
+# Remove duplicates by UID+Contract+Month
 visits_df = visits_df.drop_duplicates(subset=['UniqueID', 'ContractType', 'Month', 'Year']).reset_index(drop=True)
 
-# Finding Previous Month
-# Create a column for the previous month and year
+# Previous month flags
 visits_df['PreviousMonth'] = visits_df['Month'] - 1
 visits_df['PreviousYear'] = visits_df['Year']
 visits_df.loc[visits_df['Month'] == 1, 'PreviousMonth'] = 12
 visits_df.loc[visits_df['Month'] == 1, 'PreviousYear'] -= 1
 
-# Create a shifted DataFrame for comparison
 shifted_df = visits_df[['UniqueID', 'ContractType', 'Year', 'Month']].copy()
 shifted_df['Exists'] = True
-
-# Merge the original DataFrame with the shifted DataFrame
 merged_df = visits_df.merge(
     shifted_df,
     left_on=['UniqueID', 'ContractType', 'PreviousYear', 'PreviousMonth'],
@@ -175,93 +176,45 @@ merged_df = visits_df.merge(
     how='left',
     suffixes=('', '_y')
 )
-
-# Add a new column to indicate whether the previous entry exists
 visits_df['Previous (Category)'] = merged_df['Exists'].notna()
 
-# Create a column for the Previous (Ever) check
+# Earlier Total
 visits_df['Previous (Total)'] = False
-# Create a MultiIndex DataFrame to easily check for previous records
 index_df = visits_df.set_index(['UniqueID', 'Year', 'Month'])
-
-# Iterate over each row to check for previous month occurrence
 for idx, row in visits_df.iterrows():
     uid, year, month = row['UniqueID'], row['Year'], row['Month']
-
-    # Determine the previous month and year
-    if month == 1:
-        prev_month = 12
-        prev_year = year - 1
-    else:
-        prev_month = month - 1
-        prev_year = year
-
-    # Check if there's a record with the same Unique ID in the previous month/year
+    prev_month = 12 if month == 1 else month - 1
+    prev_year = year - 1 if month == 1 else year
     visits_df.at[idx, 'Previous (Total)'] = (uid, prev_year, prev_month) in index_df.index
 
-# Drop the temporary columns
 visits_df.drop(columns=['PreviousMonth', 'PreviousYear'], inplace=True)
-
-# Sort the DataFrame by 'Unique ID', 'Year', and 'Month'
 visits_df = visits_df.sort_values(by=['UniqueID', 'Year', 'Month', 'ContractType'])
-
-# Group by 'Unique ID' and 'Contract Type' and calculate cumulative count of earlier records
 visits_df['Earlier (Category)'] = visits_df.groupby(['UniqueID', 'ContractType']).cumcount() > 0
 visits_df['Earlier (Total)'] = visits_df.groupby(['UniqueID']).cumcount() > 0
-visits_df.reset_index(inplace=True, drop=True)
 
-branch = []
-for i in range(len(visits_df)):
-    if visits_df['Branch'][i] == 'Code 95':
-        branch.append('Code 95')
-    elif visits_df['Branch'][i] == 'ACD TRANSFER':
-        branch.append('ACD')
-    elif pd.notna(visits_df['Date of Birth'][i]) and datetime.strptime(visits_df['Date of Birth'][i].strip(),
-                                                                       "%m/%d/%Y %H:%M:%S %p").date() >= pd.Timestamp(
-        visits_df['VisitDate'][i]).date() - relativedelta(years=3):
-        branch.append('Baby')
-    else:
-        branch.append(visits_df['Branch'][i])
-visits_df['Branch_Updated'] = branch
+# Final output table
+patients_df = visits_df[[
+    'Month', 'Year', 'Branch', 'ContractType', 'ContractName', 'UniqueID', 'AdmissionID', 'PatientName',
+    'Team', 'CountyName', 'Duration (Hours)', 'CoordinatorName', 'Gender', 'Age',
+    'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)'
+]].copy()
 
-# Work with only columns I require
-patients_df = visits_df[
-    ['Month', 'Year', 'Branch_Updated', 'ContractType', 'UniqueID', 'AdmissionID', 'PatientName', 'Team', 'CountyName',
-     'Duration (Hours)',
-     'Previous (Category)',
-     'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)']].copy()
-
-# Get Metrics I need
-patients_df['Continued (Category)'] = [1 if patients_df['Previous (Category)'][i] == True else 0 for i in
-                                       range(len(patients_df))]
-patients_df['Continued (Total)'] = [1 if patients_df['Previous (Total)'][i] == True else 0 for i in
-                                    range(len(patients_df))]
-patients_df['Retained (Category)'] = [
-    1 if patients_df['Previous (Category)'][i] != True and patients_df['Earlier (Category)'][i] == True else 0 for i in
-    range(len(patients_df))]
-patients_df['Retained (Total)'] = [
-    1 if patients_df['Previous (Total)'][i] != True and patients_df['Earlier (Total)'][i] == True else 0 for i in
-    range(len(patients_df))]
-patients_df['New (Category)'] = [1 if patients_df['Earlier (Category)'][i] != True else 0 for i in
-                                 range(len(patients_df))]
-patients_df['New (Total)'] = [1 if patients_df['Earlier (Total)'][i] != True else 0 for i in range(len(patients_df))]
+# Metrics
+patients_df['Continued (Category)'] = (patients_df['Previous (Category)']).astype(int)
+patients_df['Continued (Total)'] = (patients_df['Previous (Total)']).astype(int)
+patients_df['Retained (Category)'] = ((~patients_df['Previous (Category)']) & patients_df['Earlier (Category)']).astype(
+    int)
+patients_df['Retained (Total)'] = ((~patients_df['Previous (Total)']) & patients_df['Earlier (Total)']).astype(int)
+patients_df['New (Category)'] = (~patients_df['Earlier (Category)']).astype(int)
+patients_df['New (Total)'] = (~patients_df['Earlier (Total)']).astype(int)
 
 patients_df = patients_df[patients_df['ContractType'] != 'Unknown']
 
-patients_pa = patients_df[patients_df['ContractType'] == 'PA']
-patients_df = patients_df[~(patients_df['ContractType'] == 'PA')]
-
-# paradigm_churn = get_paradigm_churn()
-
-# Write dataframes to database
+# -----------------------------
+# Write to SQLite
+# -----------------------------
 conn = sqlite3.connect(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
-
-# Create all tables
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
 patients_df.to_sql("patient_churn", conn, if_exists='replace', index=False)
-patients_pa.to_sql("patient_pa", conn, if_exists='replace', index=False)
 caregiver_df.to_sql("caregiver_churn", conn, if_exists='replace', index=False)
-caregiver_pa.to_sql("caregiver_pa", conn, if_exists='replace', index=False)
-# paradigm_churn.to_sql("paradigm_churn", conn, if_exists='replace', index=False)
-
 conn.close()
