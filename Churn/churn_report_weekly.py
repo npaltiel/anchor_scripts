@@ -1,8 +1,8 @@
-# Enhanced Churn Report Script with Updated Grouping Logic
+# Enhanced Churn Report Script with Week Ending Logic
 
 import pandas as pd
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timedelta
 from dateutil.relativedelta import relativedelta
 
 # -----------------------------
@@ -22,17 +22,17 @@ df_livein = pd.read_csv(
 df_1 = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
 df_2 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June24.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June.csv")
 df_3 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov24.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov.csv")
 df_4 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug24_MidMar25.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug_MidMar.csv")
 df_5 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidNov24_MidJune25.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidNov_MidJune.csv")
 df_6 = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidMar25_MidOct.csv")
 df_7 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidSep25_MidDec.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidApr25_MidNov.csv")
 df_lehigh = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
     dtype={'MedicaidNo': 'S10'})
@@ -50,15 +50,21 @@ visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
 visits_df['Year'] = visits_df['VisitDate'].dt.year
 visits_df['Month'] = visits_df['VisitDate'].dt.month
 
+# Calculate Week Ending (Friday)
+# dayofweek: Monday=0, Sunday=6, so Friday=4
+visits_df['WeekEnding'] = visits_df['VisitDate'] + pd.to_timedelta(
+    (4 - visits_df['VisitDate'].dt.dayofweek) % 7, unit='D'
+)
+
 # -----------------------------
-# Caregiver Churn
+# Caregiver Churn (Week-Based)
 # -----------------------------
-caregiver_df = visits_df[['CaregiverName_Code', 'Month', 'Year']].copy()
+caregiver_df = visits_df[['CaregiverName_Code', 'WeekEnding']].copy()
 split_df = caregiver_df['CaregiverName_Code'].str.split('(', expand=True)
 split_df[1] = split_df[1].str.replace(')', '')
 caregiver_df[['CaregiverName', 'CaregiverCode']] = split_df[[0, 1]]
 caregiver_df = caregiver_df[~caregiver_df['CaregiverCode'].str.contains('CDP', case=False, na=False)]
-caregiver_df = caregiver_df.drop_duplicates(subset=['CaregiverCode', 'Month', 'Year']).reset_index(drop=True)
+caregiver_df = caregiver_df.drop_duplicates(subset=['CaregiverCode', 'WeekEnding']).reset_index(drop=True)
 
 # Get Branch
 caregiver_df = caregiver_df.merge(
@@ -69,32 +75,29 @@ caregiver_df = caregiver_df.merge(
 )
 caregiver_df.drop(columns=['Caregiver Code - Office'], inplace=True)
 
-# Previous month
-caregiver_df['PreviousMonth'] = caregiver_df['Month'] - 1
-caregiver_df['PreviousYear'] = caregiver_df['Year']
-caregiver_df.loc[caregiver_df['Month'] == 1, 'PreviousMonth'] = 12
-caregiver_df.loc[caregiver_df['Month'] == 1, 'PreviousYear'] -= 1
+# Previous week (7 days before)
+caregiver_df['PreviousWeekEnding'] = caregiver_df['WeekEnding'] - pd.Timedelta(days=7)
 
-shifted_df = caregiver_df[['CaregiverCode', 'Year', 'Month']].copy()
+shifted_df = caregiver_df[['CaregiverCode', 'WeekEnding']].copy()
 shifted_df['Exists'] = 1
 
 merged_df = caregiver_df.merge(
     shifted_df,
-    left_on=['CaregiverCode', 'PreviousYear', 'PreviousMonth'],
-    right_on=['CaregiverCode', 'Year', 'Month'],
+    left_on=['CaregiverCode', 'PreviousWeekEnding'],
+    right_on=['CaregiverCode', 'WeekEnding'],
     how='left',
     suffixes=('', '_y')
 )
 caregiver_df['Continued'] = merged_df['Exists'].fillna(0).astype(int)
-caregiver_df = caregiver_df.sort_values(by=['CaregiverCode', 'Year', 'Month'])
+caregiver_df = caregiver_df.sort_values(by=['CaregiverCode', 'WeekEnding'])
 caregiver_df['Earlier'] = caregiver_df.groupby(['CaregiverCode']).cumcount() > 0
 caregiver_df['Retained'] = ((caregiver_df['Continued'] != 1) & caregiver_df['Earlier']).astype(int)
 caregiver_df['New'] = (~caregiver_df['Earlier']).astype(int)
 
-caregiver_df.drop(columns=['CaregiverName_Code', 'Earlier', 'PreviousMonth', 'PreviousYear'], inplace=True)
+caregiver_df.drop(columns=['CaregiverName_Code', 'Earlier', 'PreviousWeekEnding'], inplace=True)
 
 # -----------------------------
-# Patient Churn
+# Patient Churn (Week-Based)
 # -----------------------------
 # Split patient name and admission id
 split_df = visits_df['PatientName'].str.split('(', expand=True)
@@ -115,28 +118,28 @@ livein_pairs = set(zip(df_livein['Contract'], df_livein['Service Code']))
 hours.loc[hours.apply(
     lambda row: (row['ContractName'], row['ServiceCode_1']) in livein_pairs and row['Duration (Hours)'] > 13,
     axis=1), 'Duration (Hours)'] = 13
-grouped_hours = hours.groupby(['AdmissionID', 'Month', 'Year'], as_index=False).agg({'Duration (Hours)': 'sum'})
+grouped_hours = hours.groupby(['AdmissionID', 'WeekEnding'], as_index=False).agg({'Duration (Hours)': 'sum'})
 
 # Flag whether the visit is non-billable
 visits_df['NonBillable'] = (visits_df['ContractName'] == 'Non Billable')
 
-# Count visits per AdmissionID, Month, Year
-visit_counts = visits_df.groupby(['AdmissionID', 'Month', 'Year'])['ContractName'].transform('count')
+# Count visits per AdmissionID, WeekEnding
+visit_counts = visits_df.groupby(['AdmissionID', 'WeekEnding'])['ContractName'].transform('count')
 
 # Count how many are non-billable
-nonbillable_counts = visits_df.groupby(['AdmissionID', 'Month', 'Year'])['NonBillable'].transform('sum')
+nonbillable_counts = visits_df.groupby(['AdmissionID', 'WeekEnding'])['NonBillable'].transform('sum')
 
 # Keep only:
-# - Non-billable rows if they're the only row for that AdmissionID/Month/Year
+# - Non-billable rows if they're the only row for that AdmissionID/WeekEnding
 # - Or keep all other (billable) rows
 visits_df = visits_df[
     ~((visits_df['ContractName'] == 'Non Billable') & (visit_counts > 1))
 ]
 
 # Now drop duplicates (if more than one billable row remains)
-visits_df = visits_df.drop_duplicates(subset=['AdmissionID', 'Month', 'Year'])
+visits_df = visits_df.drop_duplicates(subset=['AdmissionID', 'WeekEnding'])
 
-visits_df = pd.merge(visits_df, grouped_hours, on=['AdmissionID', 'Month', 'Year'], how='left')
+visits_df = pd.merge(visits_df, grouped_hours, on=['AdmissionID', 'WeekEnding'], how='left')
 
 # Merge patient data and contracts
 visits_df = pd.merge(visits_df, df_contracts, on='ContractName', how='left')
@@ -160,43 +163,50 @@ visits_df['UniqueID'] = [
     else visits_df['PatientName'][i] + str(visits_df['Date of Birth'][i]) for i in range(len(visits_df))
 ]
 
-# Remove duplicates by UID+Contract+Month
-visits_df = visits_df.drop_duplicates(subset=['UniqueID', 'ContractType', 'Month', 'Year']).reset_index(drop=True)
+# Remove duplicates by UID+Contract+WeekEnding
+visits_df = visits_df.drop_duplicates(subset=['UniqueID', 'ContractType', 'WeekEnding']).reset_index(drop=True)
 
-# Previous month flags
-visits_df['PreviousMonth'] = visits_df['Month'] - 1
-visits_df['PreviousYear'] = visits_df['Year']
-visits_df.loc[visits_df['Month'] == 1, 'PreviousMonth'] = 12
-visits_df.loc[visits_df['Month'] == 1, 'PreviousYear'] -= 1
+# Previous week flags
+visits_df['PreviousWeekEnding'] = visits_df['WeekEnding'] - pd.Timedelta(days=7)
 
-shifted_df = visits_df[['UniqueID', 'ContractType', 'Year', 'Month']].copy()
+# Check if patient existed in previous week (Category)
+shifted_df = visits_df[['UniqueID', 'ContractType', 'WeekEnding']].copy()
 shifted_df['Exists'] = True
 merged_df = visits_df.merge(
     shifted_df,
-    left_on=['UniqueID', 'ContractType', 'PreviousYear', 'PreviousMonth'],
-    right_on=['UniqueID', 'ContractType', 'Year', 'Month'],
+    left_on=['UniqueID', 'ContractType', 'PreviousWeekEnding'],
+    right_on=['UniqueID', 'ContractType', 'WeekEnding'],
     how='left',
     suffixes=('', '_y')
 )
 visits_df['Previous (Category)'] = merged_df['Exists'].notna()
 
-# Earlier Total
-visits_df['Previous (Total)'] = False
-index_df = visits_df.set_index(['UniqueID', 'Year', 'Month'])
-for idx, row in visits_df.iterrows():
-    uid, year, month = row['UniqueID'], row['Year'], row['Month']
-    prev_month = 12 if month == 1 else month - 1
-    prev_year = year - 1 if month == 1 else year
-    visits_df.at[idx, 'Previous (Total)'] = (uid, prev_year, prev_month) in index_df.index
+# Check if patient existed in previous week (Total - any contract)
+shifted_total = visits_df[['UniqueID', 'WeekEnding']].drop_duplicates().copy()
+shifted_total['Exists'] = True
+merged_total = visits_df.merge(
+    shifted_total,
+    left_on=['UniqueID', 'PreviousWeekEnding'],
+    right_on=['UniqueID', 'WeekEnding'],
+    how='left',
+    suffixes=('', '_total')
+)
+visits_df['Previous (Total)'] = merged_total['Exists'].notna()
 
-visits_df.drop(columns=['PreviousMonth', 'PreviousYear'], inplace=True)
-visits_df = visits_df.sort_values(by=['UniqueID', 'Year', 'Month', 'ContractType'])
+visits_df.drop(columns=['PreviousWeekEnding'], inplace=True)
+visits_df = visits_df.sort_values(by=['UniqueID', 'WeekEnding', 'ContractType'])
 visits_df['Earlier (Category)'] = visits_df.groupby(['UniqueID', 'ContractType']).cumcount() > 0
 visits_df['Earlier (Total)'] = visits_df.groupby(['UniqueID']).cumcount() > 0
 
+visits_df['InvoiceDate'] = pd.to_datetime(visits_df['InvoiceDate'], errors='coerce')
+visits_df['WeekEnding-Invoice'] = visits_df['InvoiceDate'] + pd.to_timedelta(
+    (4 - visits_df['InvoiceDate'].dt.dayofweek) % 7, unit='D'
+)
+
 # Final output table
 patients_df = visits_df[[
-    'Month', 'Year', 'Branch', 'ContractType', 'ContractName', 'UniqueID', 'AdmissionID', 'PatientName',
+    'WeekEnding', 'WeekEnding-Invoice', 'Branch', 'ContractType', 'ContractName', 'UniqueID', 'AdmissionID',
+    'PatientName',
     'Team', 'CountyName', 'Duration (Hours)', 'CoordinatorName', 'Gender', 'Age',
     'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)'
 ]].copy()
@@ -216,7 +226,7 @@ patients_df = patients_df[patients_df['ContractType'] != 'Unknown']
 # Write to SQLite
 # -----------------------------
 conn = sqlite3.connect(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn.db")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\PycharmProjects\\anchor_scripts\\Churn\\churn_weekly.db")
 patients_df.to_sql("patient_churn", conn, if_exists='replace', index=False)
 caregiver_df.to_sql("caregiver_churn", conn, if_exists='replace', index=False)
 conn.close()
