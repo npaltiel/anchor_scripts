@@ -5,44 +5,77 @@ import sqlite3
 from datetime import datetime
 from dateutil.relativedelta import relativedelta
 
+
 # -----------------------------
 # Load Data
 # -----------------------------
+
+def normalize_medicaid(series):
+    s = series.astype("string").str.strip()
+
+    # convert blanks / nan-like text to missing
+    s = s.replace({"": pd.NA, "nan": pd.NA, "None": pd.NA, "<NA>": pd.NA})
+
+    # remove trailing .0 only when it is exactly decimal-zero formatting
+    # examples:
+    #   01015241.0   -> 01015241
+    #   01015241.00  -> 01015241
+    #   01015241     -> 01015241
+    s = s.str.replace(r"\.0+$", "", regex=True)
+
+    return s
+
+
 df_caregivers = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Caregivers (Churn).csv")
 df_patients = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\List of Patients.csv",
+    dtype={'Medicaid Number': 'string'})
 df_patients_lehigh = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv")
-df_patients_lehigh['Medicaid Number'] = df_patients_lehigh['Medicaid Number'].astype(str)
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\List of Patients Lehigh.csv",
+    dtype={'Medicaid Number': 'string'})
 df_contracts = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Contract Lookup.csv")
 df_livein = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\General Information\\Live In Lookup.csv")
 df_1 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_2023.csv",
+    dtype={'MedicaidNo': 'string'})
 df_2 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June24.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Jan_June24.csv",
+    dtype={'MedicaidNo': 'string'})
 df_3 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov24.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_May_Nov24.csv",
+    dtype={'MedicaidNo': 'string'})
 df_4 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug24_MidMar25.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug24_MidMar25.csv",
+    dtype={'MedicaidNo': 'string'})
 df_5 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidNov24_MidJune25.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidNov24_MidJune25.csv",
+    dtype={'MedicaidNo': 'string'})
 df_6 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidMar25_MidOct.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidMar25_MidOct.csv",
+    dtype={'MedicaidNo': 'string'})
 df_7 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidSep25_MidDec.csv")
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidJuly25_MidFeb26.csv",
+    dtype={'MedicaidNo': 'string'})
+df_8 = pd.read_csv(
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug25_MidMar26.csv",
+    dtype={'MedicaidNo': 'string'})
 df_lehigh = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
-    dtype={'MedicaidNo': 'S10'})
-df_lehigh['MedicaidNo'] = df_lehigh['MedicaidNo'].astype(str)
+    dtype={'MedicaidNo': 'string'})
 df_lehigh['ContractName'] = ['PA' for _ in range(len(df_lehigh))]
 
 # -----------------------------
 # Visit Preparation
 # -----------------------------
-visits_df = pd.concat([df_7, df_6, df_5, df_4, df_3, df_2, df_1, df_lehigh])
+visits_df = pd.concat([df_8, df_7, df_6, df_5, df_4, df_3, df_2, df_1, df_lehigh])
+
+visits_df['MedicaidNo'] = normalize_medicaid(visits_df['MedicaidNo'])
+df_patients_lehigh['Medicaid Number'] = normalize_medicaid(df_patients_lehigh['Medicaid Number'])
+df_patients['Medicaid Number'] = normalize_medicaid(df_patients['Medicaid Number'])
+
 visits_df = visits_df.drop_duplicates(subset=['VisitID'])
 visits_df = visits_df[(visits_df['MissedVisit'] == 'No') & (visits_df['Billed'] == 'Yes')].copy()
 
@@ -146,19 +179,21 @@ visits_df = pd.merge(visits_df, df_patients_lehigh, left_on='MedicaidNo', right_
                      suffixes=('', '_lehigh'))
 visits_df['Date of Birth'] = pd.to_datetime(visits_df['DOB'].combine_first(visits_df['Date of Birth']), errors='coerce')
 
+visits_df['Branch'] = visits_df['Branch'].astype('string').str.strip()
+visits_df['Branch'] = visits_df['Branch'].replace({'': pd.NA, 'nan': pd.NA, 'None': pd.NA})
+visits_df['Branch'] = visits_df['Branch'].fillna('Unknown')
+
 # Age calculation
 visits_df['VisitDate'] = pd.to_datetime(visits_df['VisitDate'], errors='coerce')
 visits_df['Age'] = (visits_df['VisitDate'] - visits_df['Date of Birth']).dt.days / 365.25
 
-# Medicaid cleaning
-visits_df['MedicaidNo'] = visits_df['MedicaidNo'].replace(r'\.0$', '', regex=True).str.lstrip('0')
-
 # Unique ID
-visits_df['UniqueID'] = [
-    visits_df['MedicaidNo'][i] if pd.notna(visits_df['MedicaidNo'][i]) and visits_df['MedicaidNo'][i] != 0 and
-                                  visits_df['ContractType'][i] not in ['CHHA', 'Private Pay']
-    else visits_df['PatientName'][i] + str(visits_df['Date of Birth'][i]) for i in range(len(visits_df))
-]
+visits_df['UniqueID'] = visits_df.apply(
+    lambda row: row['MedicaidNo']
+    if pd.notna(row['MedicaidNo']) and row['MedicaidNo'] != "" and row['ContractType'] not in ['CHHA', 'Private Pay']
+    else f"{row['PatientName']}_{row['Date of Birth']}",
+    axis=1
+)
 
 # Remove duplicates by UID+Contract+Month
 visits_df = visits_df.drop_duplicates(subset=['UniqueID', 'ContractType', 'Month', 'Year']).reset_index(drop=True)
@@ -180,6 +215,17 @@ merged_df = visits_df.merge(
 )
 visits_df['Previous (Category)'] = merged_df['Exists'].notna()
 
+shifted_df2 = visits_df[['UniqueID', 'ContractType', 'Branch', 'Year', 'Month']].drop_duplicates().copy()
+shifted_df2['Exists'] = True
+merged_df = visits_df.merge(
+    shifted_df2,
+    left_on=['UniqueID', 'ContractType', 'Branch', 'PreviousYear', 'PreviousMonth'],
+    right_on=['UniqueID', 'ContractType', 'Branch', 'Year', 'Month'],
+    how='left',
+    suffixes=('', '_y')
+)
+visits_df['Previous (Branch)'] = merged_df['Exists'].notna()
+
 # Earlier Total
 visits_df['Previous (Total)'] = False
 index_df = visits_df.set_index(['UniqueID', 'Year', 'Month'])
@@ -192,22 +238,28 @@ for idx, row in visits_df.iterrows():
 visits_df.drop(columns=['PreviousMonth', 'PreviousYear'], inplace=True)
 visits_df = visits_df.sort_values(by=['UniqueID', 'Year', 'Month', 'ContractType'])
 visits_df['Earlier (Category)'] = visits_df.groupby(['UniqueID', 'ContractType']).cumcount() > 0
+visits_df['Earlier (Branch)'] = visits_df.groupby(['UniqueID', 'ContractType', 'Branch'], dropna=False).cumcount() > 0
 visits_df['Earlier (Total)'] = visits_df.groupby(['UniqueID']).cumcount() > 0
 
 # Final output table
 patients_df = visits_df[[
     'Month', 'Year', 'Branch', 'ContractType', 'ContractName', 'UniqueID', 'AdmissionID', 'PatientName',
     'Team', 'CountyName', 'Duration (Hours)', 'CoordinatorName', 'Gender', 'Age',
-    'Previous (Category)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Total)'
+    'Previous (Category)', 'Previous (Branch)', 'Previous (Total)', 'Earlier (Category)', 'Earlier (Branch)',
+    'Earlier (Total)'
 ]].copy()
 
 # Metrics
 patients_df['Continued (Category)'] = (patients_df['Previous (Category)']).astype(int)
+patients_df['Continued (Branch)'] = (patients_df['Previous (Branch)']).astype(int)
 patients_df['Continued (Total)'] = (patients_df['Previous (Total)']).astype(int)
 patients_df['Retained (Category)'] = ((~patients_df['Previous (Category)']) & patients_df['Earlier (Category)']).astype(
     int)
+patients_df['Retained (Branch)'] = ((~patients_df['Previous (Branch)']) & patients_df['Earlier (Branch)']).astype(
+    int)
 patients_df['Retained (Total)'] = ((~patients_df['Previous (Total)']) & patients_df['Earlier (Total)']).astype(int)
 patients_df['New (Category)'] = (~patients_df['Earlier (Category)']).astype(int)
+patients_df['New (Branch)'] = (~patients_df['Earlier (Branch)']).astype(int)
 patients_df['New (Total)'] = (~patients_df['Earlier (Total)']).astype(int)
 
 patients_df = patients_df[patients_df['ContractType'] != 'Unknown']

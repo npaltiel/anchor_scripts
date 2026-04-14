@@ -71,9 +71,10 @@ three_weeks_ago = visits_df[
 
 recent = recent.drop_duplicates(subset=['UniqueID']).reset_index(drop=True)
 three_weeks_ago = three_weeks_ago.drop_duplicates(subset=['UniqueID']).reset_index(drop=True)
+three_weeks_ago['Coordinator'] = three_weeks_ago['CoordinatorName'].str.split(',', n=1).str[0]
 
 patients_missing = three_weeks_ago[~three_weeks_ago['UniqueID'].isin(recent['UniqueID'])][[
-    'Status', 'AdmissionID', 'ContractType']]
+    'ContractType', 'Status', 'AdmissionID', 'Coordinator']]
 
 patients_missing.insert(0, 'Week Ending', patient_week.strftime("%m-%d-%Y"))
 

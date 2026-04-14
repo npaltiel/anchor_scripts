@@ -11,17 +11,18 @@ PAUSE_BETWEEN_RETRIES = 10  # Seconds to wait between retry rounds
 
 # =============== LOAD DATA ================
 now = datetime.today()
-last_friday = now - timedelta(days=(now.weekday() - 4) % 7)
-invoice_date = f"{last_friday.month}.{last_friday.day}.{last_friday.year % 100}"
+last_friday = now - timedelta(days=(now.weekday() - 4) % 7 + 7)
+# invoice_date = f"{last_friday.month}.{last_friday.day}.{last_friday.year % 100}"
+invoice_date = '04.03.26'
 
 start_date = (last_friday - timedelta(days=6)).strftime("%m/%d/%Y")
 end_date = last_friday.strftime("%m/%d/%Y")
 
 emails_df = pd.read_excel(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\Invoice Wording Lookup.xlsx")
+    "C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\Invoice Wording Lookup.xlsx")
 
 invoice_folder_path = Path(
-    f"C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\{invoice_date}")
+    f"C:\\Users\\nochu\\OneDrive - Anchor Home Health care\\Documents\\Berry Invoices\\{invoice_date}")
 
 sent_already = {}
 
@@ -63,7 +64,11 @@ for file in invoice_folder_path.iterdir():
                 attachments.append(invoice2)
 
             # Send Email
-            addresses = filtered_df['Email Addresses'][0].split(",")
+            try:
+                addresses = filtered_df['Email Addresses'][0].split(",")
+            except:
+                missing.append(patient_name)
+                continue
             addresses = [addr.strip() for addr in addresses]
             addresses += [
                 'berry@anchorhc.org',
