@@ -60,7 +60,7 @@ df_7 = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidJuly25_MidFeb26.csv",
     dtype={'MedicaidNo': 'string'})
 df_8 = pd.read_csv(
-    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidAug25_MidMar26.csv",
+    "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_MidSep25_MidApr26.csv",
     dtype={'MedicaidNo': 'string'})
 df_lehigh = pd.read_csv(
     "C:\\Users\\nochum.paltiel\\OneDrive - Anchor Home Health care\\Documents\\Churn Report\\Visit_Report_Lehigh.csv",
@@ -225,6 +225,17 @@ merged_df = visits_df.merge(
     suffixes=('', '_y')
 )
 visits_df['Previous (Branch)'] = merged_df['Exists'].notna()
+
+shifted_df_team = visits_df[['UniqueID', 'ContractType', 'Coordination Team', 'Year', 'Month']].drop_duplicates().copy()
+shifted_df_team['Exists'] = True
+merged_df_team = visits_df.merge(
+    shifted_df_team,
+    left_on=['UniqueID', 'ContractType', 'Coordination Team', 'PreviousYear', 'PreviousMonth'],
+    right_on=['UniqueID', 'ContractType', 'Coordination Team', 'Year', 'Month'],
+    how='left',
+    suffixes=('', '_y')
+)
+visits_df['Previous (Team)'] = merged_df_team['Exists'].notna()
 
 # Earlier Total
 visits_df['Previous (Total)'] = False

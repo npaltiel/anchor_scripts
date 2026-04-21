@@ -13,7 +13,7 @@ PAUSE_BETWEEN_RETRIES = 10  # Seconds to wait between retry rounds
 now = datetime.today()
 last_friday = now - timedelta(days=(now.weekday() - 4) % 7 + 7)
 # invoice_date = f"{last_friday.month}.{last_friday.day}.{last_friday.year % 100}"
-invoice_date = '04.03.26'
+invoice_date = '04.10.26'
 
 start_date = (last_friday - timedelta(days=6)).strftime("%m/%d/%Y")
 end_date = last_friday.strftime("%m/%d/%Y")
